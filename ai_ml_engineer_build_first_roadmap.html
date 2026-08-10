@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI/ML Engineer — Build-First Roadmap</title>
+<style>
+  :root {
+    --bg: #0b0d10;
+    --panel: #12161b;
+    --panel-2: #171c22;
+    --border: #28303a;
+    --text: #e8edf2;
+    --muted: #98a2ad;
+    --accent: #7aa2f7;
+    --accent-2: #9ece6a;
+    --danger: #f7768e;
+    --shadow: 0 12px 30px rgba(0,0,0,.22);
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    line-height: 1.55;
+  }
+  .container { width: min(1180px, calc(100% - 32px)); margin: 0 auto; }
+  header {
+    padding: 56px 0 34px;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(180deg, #10151b 0%, var(--bg) 100%);
+  }
+  .eyebrow {
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: .12em;
+    font-size: .78rem;
+    font-weight: 700;
+  }
+  h1 { font-size: clamp(2rem, 5vw, 3.6rem); line-height: 1.05; margin: 10px 0 16px; }
+  h2 { margin: 0; font-size: 1.65rem; }
+  h3 { margin: 0 0 8px; font-size: 1.05rem; }
+  p { margin: 8px 0; }
+  .lead { max-width: 850px; color: var(--muted); font-size: 1.05rem; }
+  .principles {
+    margin-top: 24px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+  .principle, .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    box-shadow: var(--shadow);
+  }
+  .principle { padding: 16px; }
+  .principle strong { display: block; margin-bottom: 4px; }
+  .muted { color: var(--muted); }
+  .toolbar {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: rgba(11,13,16,.92);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 0;
+  }
+  .toolbar-inner {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .progress-wrap { flex: 1 1 280px; }
+  .progress-label {
+    display: flex;
+    justify-content: space-between;
+    color: var(--muted);
+    font-size: .86rem;
+    margin-bottom: 6px;
+  }
+  progress { width: 100%; height: 9px; accent-color: var(--accent-2); }
+  button, .search {
+    border: 1px solid var(--border);
+    background: var(--panel);
+    color: var(--text);
+    border-radius: 9px;
+    padding: 9px 12px;
+    cursor: pointer;
+  }
+  button:hover { border-color: #46515e; }
+  .search { width: 230px; outline: none; }
+  main { padding: 28px 0 80px; }
+  .stage {
+    margin: 18px 0;
+    overflow: hidden;
+  }
+  .stage-head {
+    padding: 20px;
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    justify-content: space-between;
+    cursor: pointer;
+    background: var(--panel);
+  }
+  .stage-number {
+    min-width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    display: grid;
+    place-items: center;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    color: var(--accent);
+    font-weight: 800;
+  }
+  .stage-title { flex: 1; }
+  .stage-title h2 { margin-bottom: 4px; }
+  .stage-meta { color: var(--muted); font-size: .9rem; }
+  .stage-percent {
+    min-width: 80px;
+    text-align: right;
+    color: var(--accent-2);
+    font-weight: 700;
+  }
+  .stage-body {
+    display: none;
+    padding: 0 20px 24px;
+    border-top: 1px solid var(--border);
+    background: #101419;
+  }
+  .stage.open .stage-body { display: block; }
+  .stage.open .stage-head { background: #151a20; }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+    margin-top: 18px;
+  }
+  .section { padding: 17px; background: var(--panel); border: 1px solid var(--border); border-radius: 12px; }
+  .section.full { grid-column: 1 / -1; }
+  ul { margin: 8px 0 0; padding-left: 20px; }
+  li { margin: 5px 0; }
+  .todo { margin-top: 20px; }
+  .todo h3 { margin-bottom: 10px; }
+  .task {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    padding: 9px 10px;
+    border-bottom: 1px solid #222931;
+    border-radius: 7px;
+  }
+  .task:last-child { border-bottom: 0; }
+  .task:hover { background: #151a20; }
+  input[type="checkbox"] { margin-top: 5px; accent-color: var(--accent-2); width: 16px; height: 16px; flex: 0 0 auto; }
+  .task.done label { text-decoration: line-through; color: #69737e; }
+  label { cursor: pointer; }
+  code {
+    color: #c0caf5;
+    background: #0c1014;
+    padding: 2px 5px;
+    border-radius: 4px;
+    font-size: .9em;
+  }
+  pre {
+    overflow-x: auto;
+    background: #0a0d10;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    padding: 14px;
+    color: #c9d1d9;
+    font-size: .84rem;
+  }
+  .callout {
+    margin-top: 18px;
+    padding: 14px 16px;
+    border-left: 3px solid var(--accent);
+    background: #121820;
+    color: #c9d1d9;
+    border-radius: 8px;
+  }
+  .danger { border-left-color: var(--danger); }
+  .success { border-left-color: var(--accent-2); }
+  .stage.done-stage .stage-number {
+    background: #1c2a1d;
+    color: var(--accent-2);
+    border-color: #344a35;
+  }
+  footer {
+    padding: 30px 0 60px;
+    color: var(--muted);
+    text-align: center;
+    border-top: 1px solid var(--border);
+  }
+  @media (max-width: 800px) {
+    .principles, .grid { grid-template-columns: 1fr; }
+    .stage-head { flex-wrap: wrap; }
+    .stage-percent { text-align: left; }
+    .search { width: 100%; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="container">
+    <div class="eyebrow">Build-first roadmap</div>
+    <h1>AI/ML Engineer Learning Lab</h1>
+    <p class="lead">
+      One continuously evolving production-style project. Learn concepts only when the project forces you to solve a real problem.
+      Every stage adds capabilities to the same AI Intelligence Platform.
+    </p>
+    <div class="principles">
+      <div class="principle"><strong>Build → Break → Investigate</strong><span class="muted">Encounter the problem before studying the theory.</span></div>
+      <div class="principle"><strong>Measure everything</strong><span class="muted">Use metrics, experiments, logs and evaluation instead of intuition.</span></div>
+      <div class="principle"><strong>Production over demos</strong><span class="muted">APIs, tests, queues, deployment, monitoring and failure handling matter.</span></div>
+    </div>
+  </div>
+</header>
+
+<div class="toolbar">
+  <div class="container toolbar-inner">
+    <div class="progress-wrap">
+      <div class="progress-label"><span id="progressText">0 / 0 tasks completed</span><span id="progressPct">0%</span></div>
+      <progress id="progress" value="0" max="100"></progress>
+    </div>
+    <input class="search" id="search" placeholder="Filter stages or tasks...">
+    <button id="expandAll">Expand all</button>
+    <button id="collapseAll">Collapse all</button>
+    <button id="reset">Reset progress</button>
+  </div>
+</div>
+
+<main class="container" id="roadmap"></main>
+
+<footer>
+  Progress is stored in this browser using localStorage. The roadmap is intentionally project-driven: do not mark a task complete until you can demonstrate it in code.
+</footer>
+
+<script>
+const stages = [
+{
+n:0, title:"Production Python Foundation", subtitle:"Build the application skeleton before adding intelligence.",
+goal:"Create a serious Python/FastAPI backend that is testable, typed, modular, containerized and ready for background work.",
+learn:["Python typing and generics","Pydantic and data validation","async/await and concurrency","FastAPI architecture","Dependency injection","pytest and test design","Database access and transactions","Configuration and secrets","Structured logging","Docker and local infrastructure"],
+stack:"Python • FastAPI • Pydantic • PostgreSQL • Redis • pytest • Docker • uv",
+deliverables:["Working API and database","Dataset CRUD","Health/readiness endpoints","Unit and integration tests","Dockerized local environment","Clean service/repository architecture"],
+tasks:[
+"Initialize a Python project with pyproject.toml and a reproducible environment",
+"Use type hints consistently across application code",
+"Create FastAPI application with versioned API routes",
+"Add Pydantic request/response schemas",
+"Add configuration management for environment variables",
+"Create PostgreSQL connection and migration workflow",
+"Implement dataset CRUD endpoints",
+"Separate API, service and repository responsibilities",
+"Add structured application logging",
+"Add global exception handling",
+"Write unit tests for services",
+"Write integration tests for API/database behavior",
+"Add Dockerfile",
+"Add docker-compose setup for API, PostgreSQL and Redis",
+"Add health and readiness endpoints",
+"Document how to run and test the project"
+],
+build:"POST /datasets\nGET /datasets\nGET /datasets/{id}\nDELETE /datasets/{id}"
+},
+{
+n:1, title:"Data Ingestion & Data Engineering", subtitle:"Turn raw data into reliable, inspectable datasets.",
+goal:"Build a pipeline that accepts real data, validates it, processes it asynchronously and produces useful dataset profiles.",
+learn:["NumPy","Pandas","Data cleaning","Missing values","Categorical/numeric features","Data validation","Background jobs","Queues","Idempotency","ETL concepts","Data profiling"],
+stack:"Pandas • NumPy • PostgreSQL • Redis • Worker/Queue",
+deliverables:["CSV upload pipeline","Validation report","Dataset profiler","Background processing","Job status tracking"],
+tasks:[
+"Implement CSV upload endpoint",
+"Store uploaded dataset metadata",
+"Validate file type and size",
+"Parse CSV with Pandas",
+"Detect numeric, categorical and text columns",
+"Calculate row and column counts",
+"Calculate missing-value statistics",
+"Calculate unique-value counts",
+"Calculate min, max, mean, median and standard deviation",
+"Create dataset profile endpoint",
+"Move heavy processing to a background worker",
+"Create job states: queued, running, completed, failed",
+"Persist job errors and useful diagnostics",
+"Make processing idempotent",
+"Handle malformed CSV and invalid data safely",
+"Add tests for the ingestion pipeline"
+],
+build:"upload → validate → queue → worker → profile → store"
+},
+{
+n:2, title:"Classical Machine Learning", subtitle:"Train, evaluate and serve your first real ML models.",
+goal:"Turn the platform into an ML training system. Start with a real tabular problem such as customer churn prediction.",
+learn:["Features and labels","Train/validation/test splits","Preprocessing","Feature engineering","Regression","Classification","Decision trees","Random forests","XGBoost","Cross-validation","Hyperparameters","Model persistence","Inference"],
+stack:"scikit-learn • Pandas • NumPy • XGBoost",
+deliverables:["Training pipeline","Model registry metadata","Evaluation metrics","Prediction API","Saved model artifacts"],
+tasks:[
+"Choose a real tabular dataset",
+"Define the prediction target",
+"Separate features from labels",
+"Create train/validation/test splits",
+"Build preprocessing pipeline",
+"Handle missing values",
+"Encode categorical features",
+"Create baseline model",
+"Train logistic regression or linear regression",
+"Train decision tree",
+"Train random forest",
+"Train XGBoost or another boosting model",
+"Compare model metrics",
+"Implement cross-validation",
+"Persist trained model artifacts",
+"Create model metadata record",
+"Create POST /models/train",
+"Create GET /models/{id}",
+"Create GET /models/{id}/metrics",
+"Create POST /models/{id}/predict",
+"Add inference validation and error handling"
+],
+build:"dataset → preprocessing → training → evaluation → artifact → inference API"
+},
+{
+n:3, title:"ML Failure Lab", subtitle:"Deliberately break your models and diagnose why.",
+goal:"Convert vague ML knowledge into practical understanding by creating failure cases and measuring the consequences.",
+learn:["Overfitting","Underfitting","Data leakage","Class imbalance","Precision/recall tradeoffs","Threshold tuning","Confusion matrix","ROC-AUC","Feature importance","Distribution shift","Calibration"],
+stack:"scikit-learn • Matplotlib • Pandas",
+deliverables:["Failure experiments","Metric comparison reports","Documented fixes","Regression tests for important ML behavior"],
+tasks:[
+"Create a deliberately overfit model",
+"Compare training and validation performance",
+"Reduce model complexity and compare results",
+"Create an underfit model",
+"Add useful features and measure improvement",
+"Introduce target leakage intentionally",
+"Observe unrealistically high validation performance",
+"Remove the leaked feature and retest",
+"Create an imbalanced classification dataset",
+"Compare accuracy with precision, recall and F1",
+"Generate a confusion matrix",
+"Experiment with classification thresholds",
+"Compare ROC-AUC across models",
+"Measure feature importance",
+"Create a distribution-shift experiment",
+"Document each failure and its root cause",
+"Add automated tests for critical preprocessing behavior"
+],
+build:"break model → observe metric → identify cause → fix → measure again"
+},
+{
+n:4, title:"Deep Learning with PyTorch", subtitle:"Replace one classical model with a neural network you understand.",
+goal:"Build a complete PyTorch training pipeline instead of relying on a high-level training abstraction.",
+learn:["Tensors","Tensor shapes","Datasets and DataLoaders","Neural network layers","Forward pass","Loss functions","Backpropagation","Gradients","Optimizers","Epochs and batches","Validation","GPU/CPU movement","Checkpoints"],
+stack:"PyTorch • NumPy",
+deliverables:["Custom training loop","Validation loop","Checkpoint system","GPU-capable inference","Training metrics"],
+tasks:[
+"Install and configure PyTorch",
+"Convert a dataset into tensors",
+"Implement a PyTorch Dataset",
+"Implement a DataLoader",
+"Build a small feed-forward neural network",
+"Implement forward pass",
+"Choose an appropriate loss function",
+"Implement optimizer",
+"Write the training loop yourself",
+"Write the validation loop",
+"Track training and validation loss",
+"Track task-specific metrics",
+"Experiment with batch size",
+"Experiment with learning rate",
+"Add early stopping",
+"Save checkpoints",
+"Load checkpoints for inference",
+"Detect CUDA and move tensors/model to GPU when available",
+"Expose training as a background job in the platform",
+"Add tests for model loading and inference"
+],
+build:"Dataset → DataLoader → network → loss → backprop → optimizer → checkpoint"
+},
+{
+n:5, title:"Neural Network From Scratch", subtitle:"Remove the abstraction temporarily to understand what PyTorch is doing.",
+goal:"Implement a tiny neural network with NumPy so gradients, loss and parameter updates stop being abstract concepts.",
+learn:["Forward computation","Loss calculation","Derivatives","Gradient descent","Parameter updates","Computational graphs conceptually","Why autograd exists"],
+stack:"Python • NumPy",
+deliverables:["Tiny NumPy neural network","Training loop","Comparison with PyTorch behavior"],
+tasks:[
+"Implement a simple linear model with NumPy",
+"Implement a forward function",
+"Implement a loss function",
+"Derive and implement parameter gradients",
+"Implement gradient descent manually",
+"Train the model on a tiny dataset",
+"Add a hidden layer",
+"Implement an activation function",
+"Train the multi-layer model",
+"Compare manual training with PyTorch",
+"Write down what autograd removes from the manual implementation",
+"Document the complete training flow in the project README"
+],
+build:"input → forward → loss → gradients → update → repeat"
+},
+{
+n:6, title:"LLM Application Layer", subtitle:"Add model providers without coupling the product to one vendor.",
+goal:"Build a production-style LLM gateway supporting streaming, structured output, conversation state and local models.",
+learn:["Tokens and context windows","Sampling","Temperature","Structured outputs","Function/tool calling","Streaming","Provider abstraction","Conversation state","Token usage","Retries and timeouts"],
+stack:"OpenAI-compatible APIs • Ollama • FastAPI • Redis",
+deliverables:["Provider interface","Chat API","Streaming responses","Conversation storage","Usage tracking"],
+tasks:[
+"Create an LLM provider interface",
+"Implement one hosted model provider",
+"Implement Ollama/local model provider",
+"Add model selection per request",
+"Implement streaming responses",
+"Store conversation messages",
+"Add system/user/assistant message roles",
+"Track token usage where available",
+"Add request timeout handling",
+"Add retry policy for transient failures",
+"Implement structured JSON output",
+"Implement function/tool calling",
+"Add Redis caching where safe",
+"Add request rate limiting",
+"Write provider abstraction tests",
+"Create API documentation with example requests"
+],
+build:"client → AI gateway → provider adapter → hosted/local model"
+},
+{
+n:7, title:"RAG — Retrieval-Augmented Generation", subtitle:"Give the LLM reliable access to private documents.",
+goal:"Build document ingestion, embeddings, retrieval, context construction and cited answers.",
+learn:["Document parsing","Chunking","Embeddings","Vector similarity","Metadata filtering","Vector databases","Prompt construction","Grounding","Citations"],
+stack:"PostgreSQL • pgvector • Embedding model • LLM",
+deliverables:["Document ingestion pipeline","Vector index","Retrieval service","Cited RAG answers","Document permissions foundation"],
+tasks:[
+"Implement document upload endpoint",
+"Extract text from PDF/DOCX or another real format",
+"Normalize extracted text",
+"Implement a first chunking strategy",
+"Store document and chunk metadata",
+"Generate embeddings",
+"Enable pgvector",
+"Store embeddings in PostgreSQL",
+"Implement semantic similarity search",
+"Add metadata filters",
+"Implement top-K retrieval",
+"Construct grounded prompts from retrieved chunks",
+"Return citations with answers",
+"Prevent answers when context is insufficient",
+"Add document-level access control metadata",
+"Add background ingestion jobs",
+"Add ingestion error handling",
+"Write retrieval tests"
+],
+build:"document → parse → chunk → embed → vector DB → retrieve → prompt → answer + citations"
+},
+{
+n:8, title:"RAG Evaluation & Optimization", subtitle:"Make the RAG system measurable instead of trusting demos.",
+goal:"Create a benchmark dataset and systematically improve retrieval and answer quality.",
+learn:["Retrieval evaluation","Recall@K","MRR","NDCG","Reranking","Hybrid search","Keyword search","Semantic search","Groundedness","Faithfulness","LLM-as-judge","Regression evaluation"],
+stack:"pgvector • Full-text search • Reranker • Evaluation scripts",
+deliverables:["Golden question set","Automated retrieval evaluation","Answer evaluation","Experiment comparison","RAG regression suite"],
+tasks:[
+"Create 30–100 realistic evaluation questions",
+"Associate each question with expected source documents",
+"Measure retrieval Recall@K",
+"Measure MRR",
+"Experiment with chunk sizes",
+"Compare multiple chunking strategies",
+"Experiment with top-K values",
+"Try a second embedding model",
+"Add keyword search",
+"Implement hybrid semantic + keyword retrieval",
+"Add a reranker",
+"Measure reranking impact",
+"Evaluate answer relevance",
+"Evaluate groundedness/faithfulness",
+"Test citation correctness",
+"Create a RAG regression test suite",
+"Record experiment configurations and results",
+"Choose the best configuration based on measured results"
+],
+build:"golden dataset → retrieve → score → experiment → improve → regression test"
+},
+{
+n:9, title:"Agents & Tool-Using Systems", subtitle:"Turn the LLM into a controlled workflow engine.",
+goal:"Build an enterprise support agent that can retrieve information, call APIs, perform actions and escalate safely.",
+learn:["Tool calling","Agent state","Planning","Workflow orchestration","Retries","Tool errors","Human-in-the-loop","Permissions","Audit logs","Guardrails","Termination conditions"],
+stack:"LLM • FastAPI • PostgreSQL • Redis • LangGraph after manual implementation",
+deliverables:["Tool registry","Agent loop","State machine/workflow","Approval flow","Audit trail"],
+tasks:[
+"Define a tool interface",
+"Implement search_documents tool",
+"Implement get_customer tool",
+"Implement get_order tool",
+"Implement create_ticket tool",
+"Implement a safe calculation tool",
+"Build a basic tool-calling loop without a framework",
+"Validate tool arguments with schemas",
+"Handle tool failures",
+"Add retry limits",
+"Add maximum agent iterations",
+"Persist agent state",
+"Add permission checks per tool",
+"Require human approval for sensitive actions",
+"Create complete audit logs",
+"Add conversation memory where appropriate",
+"Add deterministic business rules outside the LLM",
+"Introduce LangGraph after understanding the manual architecture",
+"Compare manual orchestration with LangGraph"
+],
+build:"user → LLM → choose tool → validate → execute → observe → continue/finish"
+},
+{
+n:10, title:"Fine-Tuning & Adaptation", subtitle:"Learn when fine-tuning solves a problem that prompting or RAG does not.",
+goal:"Fine-tune a manageable open model with LoRA/QLoRA and compare it against prompting and RAG.",
+learn:["Instruction datasets","Tokenization","Training/validation splits","LoRA","QLoRA","PEFT","Adapters","Quantization","Training metrics","Evaluation"],
+stack:"Hugging Face Transformers • PEFT • Accelerate • PyTorch",
+deliverables:["Curated dataset","Fine-tuning configuration","Adapter weights","Before/after evaluation","Inference comparison"],
+tasks:[
+"Choose a small open-source model",
+"Define a narrow task that needs adaptation",
+"Create a clean instruction dataset",
+"Create train/validation splits",
+"Inspect tokenization and sequence lengths",
+"Establish a base-model benchmark",
+"Establish a prompted-model benchmark",
+"Implement LoRA fine-tuning",
+"Run a small training experiment",
+"Track training and validation behavior",
+"Evaluate the fine-tuned model",
+"Compare base vs prompted vs fine-tuned",
+"Experiment with LoRA rank/alpha",
+"Experiment with learning rate and epochs",
+"Try QLoRA/quantized training",
+"Save adapter weights",
+"Document GPU memory and training requirements",
+"Document when fine-tuning was and was not useful"
+],
+build:"dataset → tokenizer → LoRA/QLoRA → train → evaluate → compare → serve"
+},
+{
+n:11, title:"Model Serving & Inference", subtitle:"Serve models under real production constraints.",
+goal:"Run an open LLM through a dedicated inference server and measure performance under load.",
+learn:["Inference serving","GPU memory","Quantization","Batching","Concurrency","Throughput","Latency","Streaming","Load testing","Cost per request"],
+stack:"vLLM • Docker • FastAPI • GPU • Redis",
+deliverables:["Dedicated inference server","AI gateway integration","Load-test results","Latency/throughput dashboard"],
+tasks:[
+"Deploy an open model with vLLM",
+"Connect the application through an OpenAI-compatible interface",
+"Implement streaming inference",
+"Measure first-token latency",
+"Measure end-to-end latency",
+"Measure tokens per second",
+"Measure concurrent request behavior",
+"Observe GPU memory usage",
+"Experiment with quantized model",
+"Compare quantized vs non-quantized quality",
+"Add request queueing where appropriate",
+"Add Redis caching for deterministic workloads",
+"Implement rate limiting",
+"Run a load test",
+"Document hardware requirements",
+"Document performance bottlenecks"
+],
+build:"FastAPI → AI gateway → vLLM → GPU → model"
+},
+{
+n:12, title:"MLOps, Evaluation & Monitoring", subtitle:"Make experiments reproducible and production behavior observable.",
+goal:"Track datasets, models and experiments, then monitor deployed systems for quality and operational failures.",
+learn:["Experiment tracking","Model versioning","Dataset versioning","Model registry","CI/CD","Drift","Monitoring","Tracing","A/B testing","Regression evaluation"],
+stack:"MLflow • Docker • GitHub Actions • Prometheus/Grafana or equivalent",
+deliverables:["Experiment registry","Model registry","Automated evaluation","CI pipeline","Monitoring dashboards"],
+tasks:[
+"Add MLflow experiment tracking",
+"Track parameters and metrics",
+"Store model artifacts",
+"Register model versions",
+"Record dataset version used for each model",
+"Create repeatable training command",
+"Create repeatable evaluation command",
+"Build automated model evaluation",
+"Fail evaluation when quality falls below a threshold",
+"Add CI tests on every push",
+"Add Docker image build in CI",
+"Add application metrics",
+"Add model/inference latency metrics",
+"Add error-rate monitoring",
+"Add request tracing",
+"Define useful production alerts",
+"Create a simple drift detection experiment",
+"Document rollback procedure"
+],
+build:"code/data → experiment → model → evaluation → registry → deploy → monitor"
+},
+{
+n:13, title:"Production Deployment", subtitle:"Turn the laboratory into a deployable AI product.",
+goal:"Deploy the complete platform with secure infrastructure, background workers, model serving and observability.",
+learn:["Production networking","Secrets","CI/CD deployment","Containers","Reverse proxy","Scaling","Queues","GPU infrastructure","Security","Backups","Observability"],
+stack:"Docker • Linux • Cloud/GPU provider • PostgreSQL • Redis • CI/CD",
+deliverables:["Production deployment","HTTPS","Secure secrets","Backups","Monitoring","Deployment pipeline","Operational runbook"],
+tasks:[
+"Choose deployment environment",
+"Deploy PostgreSQL securely",
+"Deploy Redis securely",
+"Deploy API service",
+"Deploy background workers",
+"Deploy model inference service",
+"Configure reverse proxy",
+"Enable HTTPS",
+"Move secrets out of source control",
+"Configure production environment variables",
+"Set database backups",
+"Set retention policy for backups",
+"Configure logging aggregation",
+"Configure application metrics",
+"Configure inference metrics",
+"Configure alerts",
+"Set resource limits",
+"Set worker concurrency intentionally",
+"Implement graceful shutdown",
+"Implement deployment health checks",
+"Create CI/CD deployment pipeline",
+"Test rollback procedure",
+"Write production runbook",
+"Perform failure/recovery drill"
+],
+build:"git push → CI → image → deploy → health checks → monitor → rollback if needed"
+},
+{
+n:14, title:"Capstone — AI Intelligence Platform", subtitle:"Integrate everything into one coherent production system.",
+goal:"Finish the platform as a portfolio-grade AI/ML engineering system that demonstrates data pipelines, ML, deep learning, LLMs, RAG, agents, evaluation, serving and MLOps.",
+learn:["System architecture","Trade-offs","Cost/performance optimization","Reliability","Security","AI product design","Technical documentation"],
+stack:"Everything from previous stages",
+deliverables:["End-to-end platform","Architecture diagram","Technical documentation","Evaluation report","Deployment guide","Portfolio-quality demo"],
+tasks:[
+"Unify dataset management with ML training",
+"Unify model registry with inference",
+"Connect document ingestion to RAG",
+"Connect RAG to the agent",
+"Connect tools to real backend services",
+"Add model/provider abstraction",
+"Add user authentication and authorization",
+"Add tenant or workspace boundaries",
+"Add audit logging",
+"Add end-to-end evaluation",
+"Add automated regression suite",
+"Add observability across API, workers and AI inference",
+"Add cost tracking",
+"Add latency tracking",
+"Add failure handling and retries",
+"Document architecture and major trade-offs",
+"Document model choices and evaluation results",
+"Document RAG experiments",
+"Document fine-tuning experiments",
+"Document deployment architecture",
+"Write a technical case study",
+"Create a clean project README",
+"Create architecture diagrams",
+"Record a concise end-to-end demo",
+"Deploy a public or controlled demonstration environment"
+],
+build:"data + ML + LLM + RAG + agents + evaluation + serving + MLOps → production AI platform"
+}
+];
+
+const STORAGE = "ai-ml-roadmap-progress-v1";
+
+function loadState() {
+  try { return JSON.parse(localStorage.getItem(STORAGE)) || {}; }
+  catch { return {}; }
+}
+let state = loadState();
+
+function key(stage, task) { return `${stage}:${task}`; }
+
+function save() {
+  localStorage.setItem(STORAGE, JSON.stringify(state));
+  updateProgress();
+}
+
+function taskHTML(stageIndex, taskIndex, text) {
+  const id = key(stageIndex, taskIndex);
+  const checked = !!state[id];
+  return `<div class="task ${checked ? "done" : ""}">
+    <input type="checkbox" id="task-${stageIndex}-${taskIndex}" data-stage="${stageIndex}" data-task="${taskIndex}" ${checked ? "checked" : ""}>
+    <label for="task-${stageIndex}-${taskIndex}">${text}</label>
+  </div>`;
+}
+
+function stageHTML(s, i) {
+  const total = s.tasks.length;
+  const done = s.tasks.reduce((n, _, j) => n + (state[key(i,j)] ? 1 : 0), 0);
+  const pct = Math.round(done / total * 100);
+  return `<section class="stage card ${pct === 100 ? "done-stage" : ""}" data-stage="${i}">
+    <div class="stage-head">
+      <div class="stage-number">${s.n}</div>
+      <div class="stage-title">
+        <h2>Stage ${s.n} — ${s.title}</h2>
+        <div class="stage-meta">${s.subtitle}</div>
+      </div>
+      <div class="stage-percent">${done}/${total} · ${pct}%</div>
+    </div>
+    <div class="stage-body">
+      <div class="grid">
+        <div class="section full"><h3>Objective</h3><p>${s.goal}</p></div>
+        <div class="section"><h3>Concepts to learn through implementation</h3><ul>${s.learn.map(x=>`<li>${x}</li>`).join("")}</ul></div>
+        <div class="section"><h3>Suggested stack</h3><p>${s.stack}</p><h3 style="margin-top:16px">Stage deliverables</h3><ul>${s.deliverables.map(x=>`<li>${x}</li>`).join("")}</ul></div>
+        <div class="section full"><h3>Core build</h3><pre>${s.build}</pre></div>
+      </div>
+      <div class="todo">
+        <h3>Todo list</h3>
+        ${s.tasks.map((t,j)=>taskHTML(i,j,t)).join("")}
+      </div>
+      <div class="callout success"><strong>Completion rule:</strong> Mark a task complete only when you can demonstrate it in the codebase, explain the design decision, and reproduce the result.</div>
+    </div>
+  </section>`;
+}
+
+function render() {
+  const root = document.getElementById("roadmap");
+  root.innerHTML = stages.map(stageHTML).join("");
+  document.querySelectorAll(".stage-head").forEach(head => {
+    head.addEventListener("click", () => head.parentElement.classList.toggle("open"));
+  });
+  document.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+    cb.addEventListener("change", e => {
+      const s = e.target.dataset.stage, t = e.target.dataset.task;
+      state[key(s,t)] = e.target.checked;
+      save();
+      render();
+      applyFilter();
+      const stage = document.querySelector(`[data-stage="${s}"]`);
+      if (stage) stage.classList.add("open");
+    });
+  });
+  updateProgress();
+}
+
+function updateProgress() {
+  const all = stages.flatMap((s,i) => s.tasks.map((_,j) => key(i,j)));
+  const done = all.filter(k => state[k]).length;
+  const pct = all.length ? Math.round(done/all.length*100) : 0;
+  document.getElementById("progressText").textContent = `${done} / ${all.length} tasks completed`;
+  document.getElementById("progressPct").textContent = `${pct}%`;
+  document.getElementById("progress").value = pct;
+}
+
+function applyFilter() {
+  const q = document.getElementById("search").value.trim().toLowerCase();
+  document.querySelectorAll(".stage").forEach(stage => {
+    const matches = !q || stage.textContent.toLowerCase().includes(q);
+    stage.style.display = matches ? "" : "none";
+  });
+}
+
+document.getElementById("search").addEventListener("input", applyFilter);
+document.getElementById("expandAll").addEventListener("click", () => {
+  document.querySelectorAll(".stage").forEach(s => s.classList.add("open"));
+});
+document.getElementById("collapseAll").addEventListener("click", () => {
+  document.querySelectorAll(".stage").forEach(s => s.classList.remove("open"));
+});
+document.getElementById("reset").addEventListener("click", () => {
+  if (confirm("Reset every checkbox? This cannot be undone.")) {
+    state = {};
+    save();
+    render();
+  }
+});
+
+render();
+</script>
+</body>
+</html>
