@@ -291,6 +291,28 @@ uv run alembic revision --autogenerate -m "create datasets table"
 uv run alembic upgrade head
 ```
 
+### Cleaning up a messy migration chain (squashing no-op revisions)
+
+Re-running `alembic revision`/`--autogenerate` with no actual model changes creates an empty no-op migration (`upgrade()`/`downgrade()` both just `pass`). This happened twice here, leaving a 4-revision chain (`init` → `create datasets table` → `init` → `create datasets table`) where only one revision actually did anything.
+
+**Constraint:** real databases already had `alembic_version` stamped at the current head — renaming/renumbering revisions would make Alembic think those databases need re-migrating (or worse, not recognize the stored version at all). The fix is to **squash down to a single file that keeps the existing head's revision id**, so already-migrated databases stay "at head" with zero extra commands, while any fresh database gets one clean migration instead of four:
+
+1. Delete every migration file except the one matching the current head id.
+2. In that surviving file, set `down_revision` to `None` (it's now the root) and copy the real `upgrade()`/`downgrade()` bodies over from whichever old revision actually did the work.
+3. Verify:
+   ```bash
+   uv run alembic heads      # should show exactly one head
+   uv run alembic history    # should show <base> -> <head-id>
+   ```
+4. Confirm existing databases don't try to re-run anything:
+   ```bash
+   uv run alembic upgrade head
+   ```
+   No `Running upgrade` log line printed = already recognized as up to date.
+5. Confirm a genuinely fresh database still builds correctly from the single squashed migration (e.g. via `docker compose down -v` to wipe the local Postgres volume, then `docker compose up --build -d` + `docker compose exec api uv run alembic upgrade head`).
+
+> **Gotcha:** if testing this through Docker, remember `docker compose exec` runs against whatever image was last built — deleting/editing migration files on the host doesn't reach a running container until you `docker compose up --build -d` again (same as any other code change).
+
 ### Sync everything
 
 Whenever dependencies are added, make sure they're installed:
