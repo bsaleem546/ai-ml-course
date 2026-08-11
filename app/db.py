@@ -13,7 +13,8 @@ def _to_async_url(url: str) -> str:
     return url
 
 
-engine = create_async_engine(_to_async_url(settings.database_url), connect_args={"ssl": "require"})
+connect_args = {"ssl": "require"} if settings.db_ssl_required else {}
+engine = create_async_engine(_to_async_url(settings.database_url), connect_args=connect_args)
 async_session_factory = async_sessionmaker(engine, expire_on_commit=False)
 
 

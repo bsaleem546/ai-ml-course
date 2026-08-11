@@ -7,6 +7,6 @@ class Settings(BaseSettings):
     database_url: str = "postgresql://postgres:postgres@localhost:5432/ai_ml"
     redis_url: str = "redis://localhost:6379/0"
     environment: str = "development"
-
+    db_ssl_required: bool = True
 
 settings = Settings()
