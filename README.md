@@ -337,3 +337,22 @@ Integration tests (`tests/integration/`) run real requests through the FastAPI a
 ```bash
 uv run pytest
 ```
+
+## Docker
+
+`Dockerfile` builds the API image using `uv` (same tool as local dev). `.dockerignore` excludes `.venv`, `.git`, `.env`, and caches from the build context — secrets are never baked into the image, they're passed in at run time.
+
+Build the image:
+
+```bash
+docker build -t ai-ml-course .
+```
+
+Run it, passing local `.env` values in (points at the same hosted Neon/Upstash used locally):
+
+```bash
+docker run --env-file .env -p 8000:8000 ai-ml-course
+```
+
+- App: http://127.0.0.1:8000/api/v1/ping
+- Docs: http://127.0.0.1:8000/docs
