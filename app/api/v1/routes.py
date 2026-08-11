@@ -5,12 +5,23 @@ from app.db import get_db
 from app.schemas.dataset import DatasetCreate, DatasetResponse
 from app.services import dataset_service
 
+from sqlalchemy import text
+
 router = APIRouter()
 
 
 @router.get("/ping")
 def ping():
     return {"status": "ok"}
+
+@router.get("/health")
+def health():
+    return {"status": "ok"}
+
+@router.get("/ready")
+async def ready(db: AsyncSession = Depends(get_db)):
+    await db.execute(text("SELECT 1"))
+    return {"status": "ready"}
 
 @router.post("/datasets", response_model=DatasetResponse, status_code=status.HTTP_201_CREATED)
 async def create_dataset(payload: DatasetCreate, db: AsyncSession = Depends(get_db)):
