@@ -310,6 +310,14 @@ uv run uvicorn app.main:app --reload
 
 ## Test
 
+### Unit test dependencies
+
+```bash
+uv add --system-certs --dev pytest-asyncio pytest-mock
+```
+
+`asyncio_mode = "auto"` is set under `[tool.pytest.ini_options]` in `pyproject.toml` so async test functions run without needing an `@pytest.mark.asyncio` decorator on each one.
+
 ```bash
 uv run pytest
 ```
