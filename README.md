@@ -356,3 +356,54 @@ docker run --env-file .env -p 8000:8000 ai-ml-course
 
 - App: http://127.0.0.1:8000/api/v1/ping
 - Docs: http://127.0.0.1:8000/docs
+
+## Docker Compose (API + local Postgres + local Redis)
+
+`docker-compose.yml` runs the full stack locally: the API (built from `Dockerfile`), a local Postgres 16 container, and a local Redis 7 container — no dependency on hosted Neon/Upstash. The `api` service's `environment:` block overrides `.env` with container-network URLs (service names like `postgres`/`redis` resolve via Docker's internal DNS) and sets `DB_SSL_REQUIRED: "false"`, since the local Postgres container doesn't have TLS configured (unlike Neon, which requires it — see `db_ssl_required` in `app/config.py` and `app/db.py`).
+
+Build and start everything (detached):
+
+```bash
+docker compose up --build -d
+```
+
+First run only (or after wiping the `postgres_data` volume) — the local Postgres starts empty, so apply migrations inside the running `api` container:
+
+```bash
+docker compose exec api uv run alembic upgrade head
+```
+
+Check container status:
+
+```bash
+docker compose ps
+```
+
+Tail logs (all services, or a specific one):
+
+```bash
+docker compose logs -f
+docker compose logs -f api
+```
+
+Stop everything (keeps the `postgres_data` volume, so data persists):
+
+```bash
+docker compose down
+```
+
+Stop everything **and** wipe the Postgres volume (fresh empty DB next time):
+
+```bash
+docker compose down -v
+```
+
+Verify it's working:
+
+```bash
+curl http://127.0.0.1:8000/api/v1/ping
+curl -X POST http://127.0.0.1:8000/api/v1/datasets -H "Content-Type: application/json" -d '{"name":"docker-test"}'
+curl http://127.0.0.1:8000/api/v1/datasets
+```
+
+> **Port conflicts:** if `docker compose up` fails with `port is already allocated` (5432, 6379, or 8000), something on your host is already using that port — check with `sudo lsof -i :<port>`, then either stop that process or change the host-side port in `docker-compose.yml`'s `ports:` mapping (e.g. `"5433:5432"` — only the first number, the host port, needs to change).
