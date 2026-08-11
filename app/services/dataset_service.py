@@ -8,7 +8,7 @@ from app.repositories import dataset_repository
 logger = logging.getLogger(__name__)
 
 class DatasetNotFoundError(Exception):
-    def __init__(self, dataset_id: int):
+    def __init__(self, dataset_id: int) -> None:
         self.dataset_id = dataset_id
         super().__init__(f"Dataset {dataset_id} not found")
 
