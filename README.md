@@ -318,6 +318,22 @@ uv add --system-certs --dev pytest-asyncio pytest-mock
 
 `asyncio_mode = "auto"` is set under `[tool.pytest.ini_options]` in `pyproject.toml` so async test functions run without needing an `@pytest.mark.asyncio` decorator on each one.
 
+### Integration test dependencies
+
+```bash
+uv add --system-certs --dev httpx
+```
+
+Integration tests (`tests/integration/`) run real requests through the FastAPI app into the actual Neon database, using `httpx.AsyncClient` + `ASGITransport`. `tests/integration/conftest.py`'s `client` fixture deletes all rows from `datasets` after each test so nothing persists.
+
+> **Gotcha:** `app/db.py`'s `engine` is created once at import time, and asyncpg connections are bound to whichever event loop created them. `pytest-asyncio`'s default is a **new event loop per test function**, which breaks any test after the first with `asyncpg.exceptions._base.InterfaceError: cannot perform operation: another operation is in progress`. Fixed by forcing one shared event loop for the whole test session in `pyproject.toml`:
+> ```toml
+> [tool.pytest.ini_options]
+> asyncio_mode = "auto"
+> asyncio_default_fixture_loop_scope = "session"
+> asyncio_default_test_loop_scope = "session"
+> ```
+
 ```bash
 uv run pytest
 ```
