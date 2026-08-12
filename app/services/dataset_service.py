@@ -11,6 +11,9 @@ from pathlib import Path
 import io
 import pandas as pd
 
+from app.schemas.dataset import DatasetProfile
+from app.services import profile_service
+
 UPLOAD_DIR = Path("uploads")
 MAX_UPLOAD_SIZE_BYTES = 10 * 1024 * 1024  # 10 MB
 
@@ -86,3 +89,16 @@ async def create_dataset_from_csv(
         dataset.id, filename, len(content), df.shape[0], df.shape[1],
     )
     return dataset
+
+def profile_dataset(dataset: Dataset) -> DatasetProfile:
+    if dataset.storage_path is None:
+        raise InvalidFileError(f"Dataset {dataset.id} has no uploaded file to profile")
+
+    try:
+        df = pd.read_csv(dataset.storage_path)
+    except FileNotFoundError:
+        raise InvalidFileError(
+            f"Dataset {dataset.id}'s uploaded file is missing from storage"
+        )
+
+    return profile_service.build_profile(df)

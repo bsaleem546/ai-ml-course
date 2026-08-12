@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import get_db
 from app.models.dataset import Dataset
-from app.schemas.dataset import DatasetCreate, DatasetResponse
+from app.schemas.dataset import DatasetCreate, DatasetProfile, DatasetResponse
 from app.services import dataset_service
 
 from fastapi import File, Form, UploadFile
@@ -61,3 +61,9 @@ async def upload_dataset(
         content_type=file.content_type,
         content=content,
     )
+    
+    
+@router.get("/datasets/{dataset_id}/profile", response_model=DatasetProfile)
+async def get_dataset_profile(dataset_id: int, db: AsyncSession = Depends(get_db)) -> DatasetProfile:
+    dataset = await dataset_service.get_dataset(db, dataset_id)
+    return dataset_service.profile_dataset(dataset)

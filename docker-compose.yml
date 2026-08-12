@@ -24,6 +24,8 @@ services:
     build: .
     ports:
       - "8000:8000"
+    volumes:
+      - uploads_data:/app/uploads
     environment:
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/ai_ml
       REDIS_URL: redis://redis:6379/0
@@ -37,3 +39,4 @@ services:
 
 volumes:
   postgres_data:
+  uploads_data:
