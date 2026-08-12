@@ -458,15 +458,7 @@ uv add --system-certs python-multipart
 
 Validation (`app/services/dataset_service.py`, `create_dataset_from_csv`): rejects non-`.csv` files and files over 10 MB with a `400` via a dedicated `InvalidFileError` → exception handler in `app/main.py` (same pattern as `DatasetNotFoundError`). Files are saved to `uploads/` on disk with a UUID-prefixed filename to avoid collisions; `storage_path` is stored on the row but deliberately excluded from `DatasetResponse` — it's an internal detail, not something the API client needs.
 
-> **Uploads only persist inside the container's own filesystem when run via Docker Compose** — `uploads/` isn't a mounted volume (unlike `postgres_data`), so files vanish on `docker compose down -v` or an image rebuild. To inspect an uploaded file inside the container: `docker compose exec api ls -la uploads/`.
-
-Test it:
-
-```bash
-curl -X POST http://127.0.0.1:8000/api/v1/datasets/upload \
-  -F "name=test-upload" \
-  -F "file=@/path/to/some.csv;type=text/csv"
-```
+> **Uploads persist in a named volume when run via Docker Compose** — `docker-compose.yml`'s `api` service mounts `uploads_data:/app/uploads`, same pattern as `postgres_data`, so files survive `docker compose up --build`. They're only lost on `docker compose down -v` (which explicitly wipes volumes) or if run outside Docker without a persistent `uploads/` directory. To inspect an uploaded file inside the container: `docker compose exec api ls -la uploads/`.
 
 ### Sample CSV datasets for testing
 
@@ -474,3 +466,61 @@ curl -X POST http://127.0.0.1:8000/api/v1/datasets/upload \
 - [sample-files.com CSV data](https://sample-files.com/data/csv/) — includes mixed types, quoted fields, Unicode, and deliberately malformed data, useful for testing validation/error handling
 - [CSV Tools sample data](https://csvtools.com/sample-data/)
 - [SampleYogi sample CSV files](https://www.sampleyogi.com/samples/sample-csv)
+
+### 2. Parsing CSV with Pandas
+
+```bash
+uv add --system-certs pandas
+```
+
+After saving the uploaded file to disk, `create_dataset_from_csv` (`app/services/dataset_service.py`) parses it with `pd.read_csv(io.BytesIO(content))` and catches `pandas.errors.ParserError`/`EmptyDataError` specifically, re-raising as `InvalidFileError` (→ clean `400`, not a raw pandas traceback). Row/column counts from this parse are logged but not yet returned to the client — that comes with the profile endpoint below.
+
+### 3. Dataset profiling
+
+`app/schemas/dataset.py` gained `ColumnProfile` (per-column: `dtype` classification, missing/unique counts, numeric stats) and `DatasetProfile` (row/column counts + list of `ColumnProfile`). The actual analysis logic lives in a new `app/services/profile_service.py`, `build_profile(df)`:
+
+- **Numeric vs. categorical vs. text**: `pd.api.types.is_numeric_dtype` catches numeric columns; among the rest, a column is `"categorical"` if its unique-value ratio (`nunique() / row_count`) is under `CATEGORICAL_UNIQUE_RATIO_THRESHOLD` (0.5), else `"text"`. This is a heuristic tuned for realistically-sized data — on tiny (3-5 row) test files it frequently misclassifies things that would obviously be categorical at real scale (e.g. a `city` column repeating twice in 4 rows still has a 0.5+ unique ratio).
+- **`_safe_float`** converts `NaN` → `None` for stats like `std()` on a single-value column (standard deviation of one number is undefined) — without it, `float(nan)` would silently produce invalid JSON.
+
+`GET /api/v1/datasets/{id}/profile` (in `app/api/v1/routes.py`) re-reads the dataset's file from `storage_path` and profiles it on demand — no caching yet at this point in the build (the background job system below changes this).
+
+### 4. Background job processing
+
+Uses FastAPI's built-in `BackgroundTasks` (not a separate queue/worker process, despite Redis being provisioned) — chosen to focus on learning job-state tracking and idempotency without adding a message-broker library at the same time.
+
+New `IngestionJob` model/table (`app/models/ingestion_job.py`, migration `add ingestion jobs table`) tracks each upload's processing lifecycle: `status` (`queued` → `running` → `completed`/`failed`), `error_message`, and `profile_json` (the computed `DatasetProfile`, serialized). `dataset_id` is a foreign key to `datasets.id`.
+
+`POST /api/v1/datasets/upload` now returns **`202 Accepted`** with job info (`IngestionJobResponse`: `id`, `dataset_id`, `status`, `error_message`) instead of the dataset itself — `202` specifically signals "accepted, not finished yet," distinct from `201 Created`. The client polls `GET /api/v1/jobs/{job_id}` until `status` is `completed` or `failed`.
+
+`app/services/job_service.py`'s `run_ingestion_job(job_id)` does the actual work, scheduled via `background_tasks.add_task(...)` in the upload route:
+
+```python
+async def run_ingestion_job(job_id: int) -> None:
+    async with async_session_factory() as db:
+        job = await job_repository.get_by_id(db, job_id)
+        if job is None or job.status != JobStatus.QUEUED:
+            return
+        ...
+```
+
+- **Own DB session**: opens a fresh `async_session_factory()` session rather than reusing the request's `Depends(get_db)` session — that session is tied to the HTTP request/response cycle and gets closed once the response is sent, but this function keeps running after the response is already back with the client.
+- **Idempotency guard**: `if job is None or job.status != JobStatus.QUEUED: return` — re-invoking this function on an already-processed job (verified by manually re-calling it against a `completed` job) does nothing, rather than reprocessing.
+- **Error persistence**: wraps the actual work in `try/except Exception`, writing `status=FAILED` + `error_message=str(e)` on any failure. This is intentionally broader than the route-level exception handling — there's no HTTP request/response context here for a global exception handler to catch anything, so an uncaught exception here would otherwise leave the job silently stuck at `"running"` forever. Verified by deliberately deleting an uploaded file mid-flight and confirming the job transitions to `failed` with the real error message, not a hang.
+
+Test the full flow:
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/v1/datasets/upload \
+  -F "name=test-upload" \
+  -F "file=@/path/to/some.csv;type=text/csv"
+# note the returned job id, then:
+curl http://127.0.0.1:8000/api/v1/jobs/<job_id>
+```
+
+### 5. Tests for the ingestion pipeline
+
+Unit tests (`tests/unit/test_profile_service.py`, `test_job_service.py`) mock dependencies, same pattern as Stage 0's `test_dataset_service.py` — `test_profile_service.py` checks column-type classification and stats against small in-memory DataFrames; `test_job_service.py` specifically exercises the idempotency guard by mocking `job_repository` and asserting `update_status` is never called for an already-`completed` or nonexistent job.
+
+Integration tests (`tests/integration/test_ingestion_pipeline.py`) exercise the real upload → background job → poll flow through the actual API + DB. Note: the test asserts the job is `"completed"` immediately after the upload response, with no sleep/retry — this works because in-process ASGI test clients (`httpx.AsyncClient` + `ASGITransport`) execute `BackgroundTasks` before returning control from the request, unlike a real deployed server handling genuinely concurrent traffic. Don't rely on this timing assumption outside tests.
+
+> **Gotcha:** once `IngestionJob` has a foreign key to `datasets.id`, `tests/integration/conftest.py`'s per-test cleanup (`DELETE FROM datasets`) started failing with `ForeignKeyViolationError` on any test that uploads a file (creating both a dataset and a job row). Fixed by deleting the child table first: `delete(IngestionJob)` before `delete(Dataset)`, same session, before the commit — standard FK cleanup ordering, children before parents.
