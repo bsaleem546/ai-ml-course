@@ -6,6 +6,10 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.db import Base
 
 
+def _utcnow() -> datetime.datetime:
+    return datetime.datetime.now(datetime.UTC)
+
+
 class IngestionJob(Base):
     __tablename__ = "ingestion_jobs"
 
@@ -15,11 +19,11 @@ class IngestionJob(Base):
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     profile_json: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime.datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, default=datetime.datetime.utcnow
+        DateTime(timezone=True), nullable=False, default=_utcnow
     )
     updated_at: Mapped[datetime.datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
-        default=datetime.datetime.utcnow,
-        onupdate=datetime.datetime.utcnow,
+        default=_utcnow,
+        onupdate=_utcnow,
     )
