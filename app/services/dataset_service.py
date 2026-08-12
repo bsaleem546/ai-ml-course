@@ -8,6 +8,9 @@ from app.repositories import dataset_repository
 import uuid
 from pathlib import Path
 
+import io
+import pandas as pd
+
 UPLOAD_DIR = Path("uploads")
 MAX_UPLOAD_SIZE_BYTES = 10 * 1024 * 1024  # 10 MB
 
@@ -65,6 +68,11 @@ async def create_dataset_from_csv(
     storage_path = UPLOAD_DIR / f"{uuid.uuid4()}_{filename}"
     storage_path.write_bytes(content)
 
+    try:
+        df = pd.read_csv(io.BytesIO(content))
+    except (pd.errors.ParserError, pd.errors.EmptyDataError) as e:
+        raise InvalidFileError(f"Could not parse CSV: {e}")
+
     dataset = await dataset_repository.create_with_file(
         db,
         name=name,
@@ -73,5 +81,8 @@ async def create_dataset_from_csv(
         size_bytes=len(content),
         storage_path=str(storage_path),
     )
-    logger.info("dataset uploaded id=%s filename=%s size=%s", dataset.id, filename, len(content))
+    logger.info(
+        "dataset uploaded id=%s filename=%s size=%s rows=%s columns=%s",
+        dataset.id, filename, len(content), df.shape[0], df.shape[1],
+    )
     return dataset
