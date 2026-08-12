@@ -3,12 +3,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import get_db
 from app.models.dataset import Dataset
+from app.models.ingestion_job import IngestionJob
 from app.schemas.dataset import DatasetCreate, DatasetProfile, DatasetResponse
 from app.services import dataset_service
 
 from fastapi import File, Form, UploadFile
 
 from sqlalchemy import text
+
+from fastapi import BackgroundTasks
+
+from app.schemas.dataset import IngestionJobResponse
+from app.services import job_service
 
 router = APIRouter()
 
@@ -47,23 +53,32 @@ async def delete_dataset(dataset_id: int, db: AsyncSession = Depends(get_db)) ->
     await dataset_service.delete_dataset(db, dataset_id)
     
     
-@router.post("/datasets/upload", response_model=DatasetResponse, status_code=status.HTTP_201_CREATED)
+@router.get("/datasets/{dataset_id}/profile", response_model=DatasetProfile)
+async def get_dataset_profile(dataset_id: int, db: AsyncSession = Depends(get_db)) -> DatasetProfile:
+    dataset = await dataset_service.get_dataset(db, dataset_id)
+    return dataset_service.profile_dataset(dataset)
+
+
+@router.post("/datasets/upload", response_model=IngestionJobResponse, status_code=status.HTTP_202_ACCEPTED)
 async def upload_dataset(
+    background_tasks: BackgroundTasks,
     name: str = Form(...),
     file: UploadFile = File(...),
     db: AsyncSession = Depends(get_db),
-) -> Dataset:
+) -> IngestionJob:
     content = await file.read()
-    return await dataset_service.create_dataset_from_csv(
+    dataset = await dataset_service.create_dataset_from_csv(
         db,
         name=name,
         filename=file.filename,
         content_type=file.content_type,
         content=content,
     )
-    
-    
-@router.get("/datasets/{dataset_id}/profile", response_model=DatasetProfile)
-async def get_dataset_profile(dataset_id: int, db: AsyncSession = Depends(get_db)) -> DatasetProfile:
-    dataset = await dataset_service.get_dataset(db, dataset_id)
-    return dataset_service.profile_dataset(dataset)
+    job = await job_service.create_job(db, dataset_id=dataset.id)
+    background_tasks.add_task(job_service.run_ingestion_job, job.id)
+    return job
+
+
+@router.get("/jobs/{job_id}", response_model=IngestionJobResponse)
+async def get_job(job_id: int, db: AsyncSession = Depends(get_db)) -> IngestionJob:
+    return await job_service.get_job(db, job_id)

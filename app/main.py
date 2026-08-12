@@ -7,6 +7,9 @@ from app.api.v1.routes import router as v1_router
 from app.logging_config import setup_logging
 from app.services.dataset_service import DatasetNotFoundError, InvalidFileError
 
+from app.services.job_service import JobNotFoundError
+
+
 logger = logging.getLogger(__name__)
 
 setup_logging()
@@ -34,5 +37,13 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONR
 async def invalid_file_handler(request: Request, exc: InvalidFileError) -> JSONResponse:
     return JSONResponse(
         status_code=status.HTTP_400_BAD_REQUEST,
+        content={"detail": str(exc)},
+    )
+    
+    
+@app.exception_handler(JobNotFoundError)
+async def job_not_found_handler(request: Request, exc: JobNotFoundError) -> JSONResponse:
+    return JSONResponse(
+        status_code=status.HTTP_404_NOT_FOUND,
         content={"detail": str(exc)},
     )

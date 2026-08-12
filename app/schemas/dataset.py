@@ -31,3 +31,17 @@ class DatasetProfile(BaseModel):
     row_count: int
     column_count: int
     columns: list[ColumnProfile]
+    
+    
+class JobStatus:
+    QUEUED = "queued"
+    RUNNING = "running"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+
+class IngestionJobResponse(BaseModel):
+    id: int
+    dataset_id: int
+    status: str
+    error_message: str | None = None
