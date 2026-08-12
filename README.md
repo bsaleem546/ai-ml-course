@@ -429,3 +429,48 @@ curl http://127.0.0.1:8000/api/v1/datasets
 ```
 
 > **Port conflicts:** if `docker compose up` fails with `port is already allocated` (5432, 6379, or 8000), something on your host is already using that port — check with `sudo lsof -i :<port>`, then either stop that process or change the host-side port in `docker-compose.yml`'s `ports:` mapping (e.g. `"5433:5432"` — only the first number, the host port, needs to change).
+
+> **Any code or dependency change requires a rebuild.** `Dockerfile` does `COPY . .` at *build* time — there's no live volume syncing local file changes into the running container. After editing app code, adding a dependency, or adding/removing a migration file, always re-run:
+> ```bash
+> docker compose up --build -d
+> ```
+> If the change added a migration, also re-run it inside the container:
+> ```bash
+> docker compose exec api uv run alembic upgrade head
+> ```
+
+## Stage 1 — Data Ingestion & Data Engineering
+
+### 1. CSV upload endpoint
+
+Added file-related columns (`filename`, `content_type`, `size_bytes`, `storage_path`) to `Dataset` via a new migration:
+
+```bash
+uv run alembic revision --autogenerate -m "add file metadata to datasets"
+uv run alembic upgrade head
+```
+
+`POST /api/v1/datasets/upload` accepts `multipart/form-data` — a `name` field plus a `file`. Requires `python-multipart` (FastAPI's `Form`/`File`/`UploadFile` need it even though nothing imports it directly):
+
+```bash
+uv add --system-certs python-multipart
+```
+
+Validation (`app/services/dataset_service.py`, `create_dataset_from_csv`): rejects non-`.csv` files and files over 10 MB with a `400` via a dedicated `InvalidFileError` → exception handler in `app/main.py` (same pattern as `DatasetNotFoundError`). Files are saved to `uploads/` on disk with a UUID-prefixed filename to avoid collisions; `storage_path` is stored on the row but deliberately excluded from `DatasetResponse` — it's an internal detail, not something the API client needs.
+
+> **Uploads only persist inside the container's own filesystem when run via Docker Compose** — `uploads/` isn't a mounted volume (unlike `postgres_data`), so files vanish on `docker compose down -v` or an image rebuild. To inspect an uploaded file inside the container: `docker compose exec api ls -la uploads/`.
+
+Test it:
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/v1/datasets/upload \
+  -F "name=test-upload" \
+  -F "file=@/path/to/some.csv;type=text/csv"
+```
+
+### Sample CSV datasets for testing
+
+- [Datablist sample CSV files](https://www.datablist.com/learn/csv/download-sample-csv-files) — 100 to 2,000,000 records
+- [sample-files.com CSV data](https://sample-files.com/data/csv/) — includes mixed types, quoted fields, Unicode, and deliberately malformed data, useful for testing validation/error handling
+- [CSV Tools sample data](https://csvtools.com/sample-data/)
+- [SampleYogi sample CSV files](https://www.sampleyogi.com/samples/sample-csv)

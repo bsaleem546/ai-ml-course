@@ -5,7 +5,7 @@ from fastapi.responses import JSONResponse
 
 from app.api.v1.routes import router as v1_router
 from app.logging_config import setup_logging
-from app.services.dataset_service import DatasetNotFoundError
+from app.services.dataset_service import DatasetNotFoundError, InvalidFileError
 
 logger = logging.getLogger(__name__)
 
@@ -28,4 +28,11 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONR
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content={"detail": "Internal server error"},
+    )
+    
+@app.exception_handler(InvalidFileError)
+async def invalid_file_handler(request: Request, exc: InvalidFileError) -> JSONResponse:
+    return JSONResponse(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        content={"detail": str(exc)},
     )

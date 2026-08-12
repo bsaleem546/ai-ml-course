@@ -6,6 +6,8 @@ from app.models.dataset import Dataset
 from app.schemas.dataset import DatasetCreate, DatasetResponse
 from app.services import dataset_service
 
+from fastapi import File, Form, UploadFile
+
 from sqlalchemy import text
 
 router = APIRouter()
@@ -43,3 +45,19 @@ async def get_dataset(dataset_id: int, db: AsyncSession = Depends(get_db)) -> Da
 @router.delete("/datasets/{dataset_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_dataset(dataset_id: int, db: AsyncSession = Depends(get_db)) -> None:
     await dataset_service.delete_dataset(db, dataset_id)
+    
+    
+@router.post("/datasets/upload", response_model=DatasetResponse, status_code=status.HTTP_201_CREATED)
+async def upload_dataset(
+    name: str = Form(...),
+    file: UploadFile = File(...),
+    db: AsyncSession = Depends(get_db),
+) -> Dataset:
+    content = await file.read()
+    return await dataset_service.create_dataset_from_csv(
+        db,
+        name=name,
+        filename=file.filename,
+        content_type=file.content_type,
+        content=content,
+    )

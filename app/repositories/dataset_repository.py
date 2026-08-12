@@ -25,3 +25,24 @@ async def get_by_id(db: AsyncSession, dataset_id: int) -> Dataset | None:
 async def delete(db: AsyncSession, dataset: Dataset) -> None:
     await db.delete(dataset)
     await db.commit()
+    
+    
+async def create_with_file(
+    db: AsyncSession,
+    name: str,
+    filename: str,
+    content_type: str,
+    size_bytes: int,
+    storage_path: str,
+) -> Dataset:
+    dataset = Dataset(
+        name=name,
+        filename=filename,
+        content_type=content_type,
+        size_bytes=size_bytes,
+        storage_path=storage_path,
+    )
+    db.add(dataset)
+    await db.commit()
+    await db.refresh(dataset)
+    return dataset
