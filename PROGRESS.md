@@ -33,7 +33,7 @@ which does **not** travel with the repo — this file is the portable source of 
   so far), job states (queued/running/completed/failed), error persistence, idempotency,
   tests. All 16/16 tasks. Full build log in `README.md` under "Stage 1."
 
-### Stage 2: in progress (9/21 tasks done)
+### Stage 2: in progress (10/21 tasks done)
 
 **Done:**
 1. Choose a real tabular dataset — [Telco Customer Churn](https://raw.githubusercontent.com/IBM/telco-customer-churn-on-icp4d/master/data/Telco-Customer-Churn.csv)
@@ -47,6 +47,7 @@ which does **not** travel with the repo — this file is the portable source of 
 7. Encode categorical features.
 8. Create baseline model (`DummyClassifier`, majority-class — accuracy 0.7348, the floor every real model must beat).
 9. Train logistic regression — accuracy 0.8059, but **churn-class recall only 0.59** (misses 41% of actual churners). This gap between "looks fine on accuracy" and "mediocre at the thing that matters" is deliberate setup for Stage 3 (ML Failure Lab).
+10. Train decision tree (`max_depth=5`) — accuracy 0.7926 (lower than logistic regression), but churn recall 0.62 (higher). First concrete example of "no single winner" between models — precision/recall tradeoff, not a strict improvement. Both models still miss ~40% of actual churners.
 
 All of this lives in **`scripts/train_churn_model.py`** — a standalone script (not yet wired
 into the FastAPI app), run with `uv run python scripts/train_churn_model.py`. Deliberately
@@ -58,9 +59,9 @@ scikit-learn exploration is settled.
 have a blank/whitespace string (not a real `NaN`) for brand-new customers with `tenure=0`.
 Fixed with `pd.to_numeric(df["TotalCharges"], errors="coerce")` before anything else.
 
-**Next task:** "Train decision tree" — then random forest, XGBoost, compare metrics,
-implement cross-validation, persist model artifacts, model metadata record, and finally the
-API tasks (`POST /models/train`, `GET /models/{id}`, `GET /models/{id}/metrics`,
+**Next task:** "Train random forest" — then XGBoost, compare metrics, implement
+cross-validation, persist model artifacts, model metadata record, and finally the API tasks
+(`POST /models/train`, `GET /models/{id}`, `GET /models/{id}/metrics`,
 `POST /models/{id}/predict`, inference validation/error handling).
 
 ## Working conventions established this build (read before continuing)

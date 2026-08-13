@@ -10,6 +10,8 @@ from sklearn.dummy import DummyClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, classification_report
 
+from sklearn.tree import DecisionTreeClassifier
+
 DATA_PATH = "data/telco_churn.csv"  # update to wherever you saved it
 
 df = pd.read_csv(DATA_PATH)
@@ -77,3 +79,12 @@ logreg_pipeline.fit(X_train, y_train)
 logreg_preds = logreg_pipeline.predict(X_val)
 print(f"\nLogistic regression accuracy: {accuracy_score(y_val, logreg_preds):.4f}")
 print(classification_report(y_val, logreg_preds, target_names=["no churn", "churn"]))
+
+tree_pipeline = Pipeline(steps=[
+    ("preprocessor", preprocessor),
+    ("classifier", DecisionTreeClassifier(max_depth=5, random_state=42)),
+])
+tree_pipeline.fit(X_train, y_train)
+tree_preds = tree_pipeline.predict(X_val)
+print(f"\nDecision tree accuracy: {accuracy_score(y_val, tree_preds):.4f}")
+print(classification_report(y_val, tree_preds, target_names=["no churn", "churn"]))
