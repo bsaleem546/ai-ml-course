@@ -33,7 +33,7 @@ which does **not** travel with the repo — this file is the portable source of 
   so far), job states (queued/running/completed/failed), error persistence, idempotency,
   tests. All 16/16 tasks. Full build log in `README.md` under "Stage 1."
 
-### Stage 2: in progress (14/21 tasks done)
+### Stage 2: in progress (15/21 tasks done)
 
 **Done:**
 1. Choose a real tabular dataset — [Telco Customer Churn](https://raw.githubusercontent.com/IBM/telco-customer-churn-on-icp4d/master/data/Telco-Customer-Churn.csv)
@@ -82,6 +82,13 @@ which does **not** travel with the repo — this file is the portable source of 
    assignment line was never actually added. Fixed by importing only `XGBClassifier` from
    xgboost and explicitly adding `cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)`
    right after the preprocessor fit, before any model pipeline uses it.
+15. Persist trained model artifacts — `joblib.dump(logreg_pipeline, "models/churn_logreg_pipeline.joblib")`
+   at the end of the script. Chose logistic regression (0.547 CV recall, most stable of the
+   two closest contenders) over XGBoost to persist first. `joblib.dump` auto-creates missing
+   parent directories, so `models/` didn't need to be manually created. `models/` added to
+   `.gitignore` (binary artifacts, same treatment as `data/`/`uploads/`). Verified by loading
+   the file back with `joblib.load(...)` and confirming `.named_steps` shows both the
+   `preprocessor` (numeric + categorical sub-pipelines) and fitted `classifier` intact.
 
 All of this lives in **`scripts/train_churn_model.py`** — a standalone script (not yet wired
 into the FastAPI app), run with `uv run python scripts/train_churn_model.py`. Deliberately
@@ -93,9 +100,14 @@ scikit-learn exploration is settled.
 have a blank/whitespace string (not a real `NaN`) for brand-new customers with `tenure=0`.
 Fixed with `pd.to_numeric(df["TotalCharges"], errors="coerce")` before anything else.
 
-**Next task:** "Persist trained model artifacts" — then create a model metadata record, and
-finally the API tasks (`POST /models/train`, `GET /models/{id}`, `GET /models/{id}/metrics`,
-`POST /models/{id}/predict`, inference validation/error handling).
+**Next task:** "Create model metadata record" — then the API tasks (`POST /models/train`,
+`GET /models/{id}`, `GET /models/{id}/metrics`, `POST /models/{id}/predict`, inference
+validation/error handling).
+
+**Security note (joblib):** `joblib.load`/pickle-based formats can execute arbitrary code if
+loading an untrusted file. Fine here since we only ever load artifacts this same project
+trained and saved locally — never load a `.joblib` file from an external/untrusted source
+without treating it like arbitrary code execution risk.
 
 ## Working conventions established this build (read before continuing)
 

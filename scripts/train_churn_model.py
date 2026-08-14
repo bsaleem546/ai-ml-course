@@ -19,6 +19,8 @@ from xgboost import XGBClassifier
 from sklearn.metrics import precision_score, recall_score, f1_score
 from sklearn.model_selection import cross_val_score, StratifiedKFold
 
+import joblib
+
 DATA_PATH = "data/telco_churn.csv"  # update to wherever you saved it
 
 results = []
@@ -165,3 +167,6 @@ print(f"XGBoost CV recall: {xgb_cv_scores.mean():.4f} (+/- {xgb_cv_scores.std():
 results_df = pd.DataFrame(results)
 print("\n=== Model comparison ===")
 print(results_df.to_string(index=False))
+
+joblib.dump(logreg_pipeline, "models/churn_logreg_pipeline.joblib")
+print("\nSaved model to models/churn_logreg_pipeline.joblib")
