@@ -33,7 +33,7 @@ which does **not** travel with the repo — this file is the portable source of 
   so far), job states (queued/running/completed/failed), error persistence, idempotency,
   tests. All 16/16 tasks. Full build log in `README.md` under "Stage 1."
 
-### Stage 2: in progress (13/21 tasks done)
+### Stage 2: in progress (14/21 tasks done)
 
 **Done:**
 1. Choose a real tabular dataset — [Telco Customer Churn](https://raw.githubusercontent.com/IBM/telco-customer-churn-on-icp4d/master/data/Telco-Customer-Churn.csv)
@@ -60,6 +60,28 @@ which does **not** travel with the repo — this file is the portable source of 
    | XGBoost | 0.7718 | 0.5809 | 0.5000 | 0.5374 |
 
    No single model wins every metric: best accuracy/F1 is Logistic Regression, best recall (catches the most actual churners) is Decision Tree, best precision (fewest false alarms) is Random Forest. This is the concrete evidence base for Stage 3's precision/recall-tradeoff and class-imbalance lessons.
+14. Implement cross-validation — `StratifiedKFold(n_splits=5, shuffle=True, random_state=42)` + `cross_val_score(..., scoring="recall")` per model, run on `X_train`/`y_train`. 5-fold CV recall (mean ± std):
+
+   | model | single-split recall | CV recall (mean ± std) |
+   |---|---|---|
+   | Logistic Regression | 0.593 | 0.547 ± 0.030 |
+   | Decision Tree | 0.621 | 0.521 ± 0.070 |
+   | Random Forest | 0.425 | 0.436 ± 0.022 |
+   | XGBoost | 0.500 | 0.531 ± 0.029 |
+
+   Important finding: the single train/val split ranking was misleading. Decision tree looked
+   best on recall (0.621) but has the widest CV spread (± 0.070) — unstable, that number was
+   partly luck. XGBoost looked worst on the single split (0.500) but has a better and more
+   stable true average (0.531 ± 0.029) than the decision tree. Cross-validation is what
+   revealed this — a single split isn't trustworthy enough to rank models on its own.
+
+   **Gotcha hit while adding this:** `from xgboost import XGBClassifier, cv` accidentally
+   imported XGBoost's own `cv` function under the same name intended for
+   `StratifiedKFold(...)`, causing `InvalidParameterError` (cv was a function, not a
+   splitter) and then `NameError` once the bad import was removed but the `cv = StratifiedKFold(...)`
+   assignment line was never actually added. Fixed by importing only `XGBClassifier` from
+   xgboost and explicitly adding `cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)`
+   right after the preprocessor fit, before any model pipeline uses it.
 
 All of this lives in **`scripts/train_churn_model.py`** — a standalone script (not yet wired
 into the FastAPI app), run with `uv run python scripts/train_churn_model.py`. Deliberately
@@ -71,9 +93,9 @@ scikit-learn exploration is settled.
 have a blank/whitespace string (not a real `NaN`) for brand-new customers with `tenure=0`.
 Fixed with `pd.to_numeric(df["TotalCharges"], errors="coerce")` before anything else.
 
-**Next task:** "Implement cross-validation" — then persist model artifacts, model metadata
-record, and finally the API tasks (`POST /models/train`, `GET /models/{id}`,
-`GET /models/{id}/metrics`, `POST /models/{id}/predict`, inference validation/error handling).
+**Next task:** "Persist trained model artifacts" — then create a model metadata record, and
+finally the API tasks (`POST /models/train`, `GET /models/{id}`, `GET /models/{id}/metrics`,
+`POST /models/{id}/predict`, inference validation/error handling).
 
 ## Working conventions established this build (read before continuing)
 

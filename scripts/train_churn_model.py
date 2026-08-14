@@ -17,6 +17,7 @@ from sklearn.ensemble import RandomForestClassifier
 from xgboost import XGBClassifier
 
 from sklearn.metrics import precision_score, recall_score, f1_score
+from sklearn.model_selection import cross_val_score, StratifiedKFold
 
 DATA_PATH = "data/telco_churn.csv"  # update to wherever you saved it
 
@@ -70,6 +71,7 @@ preprocessor = ColumnTransformer(transformers=[
 ])
 
 X_train_transformed = preprocessor.fit_transform(X_train)
+cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
 # print(f"X_train_transformed shape: {X_train_transformed.shape}")
 
 # Baseline: always predict the majority class.
@@ -94,6 +96,8 @@ results.append({
     "f1": f1_score(y_val, logreg_preds),
 })
 
+logreg_cv_scores = cross_val_score(logreg_pipeline, X_train, y_train, cv=cv, scoring="recall")
+print(f"Logistic regression CV recall: {logreg_cv_scores.mean():.4f} (+/- {logreg_cv_scores.std():.4f})")
 # print(f"\nLogistic regression accuracy: {accuracy_score(y_val, logreg_preds):.4f}")
 # print(classification_report(y_val, logreg_preds, target_names=["no churn", "churn"]))
 
@@ -112,6 +116,8 @@ results.append({
     "f1": f1_score(y_val, tree_preds),
 })
 
+tree_cv_scores = cross_val_score(tree_pipeline, X_train, y_train, cv=cv, scoring="recall")
+print(f"Decision tree CV recall: {tree_cv_scores.mean():.4f} (+/- {tree_cv_scores.std():.4f})")
 # print(f"\nDecision tree accuracy: {accuracy_score(y_val, tree_preds):.4f}")
 # print(classification_report(y_val, tree_preds, target_names=["no churn", "churn"]))
 
@@ -131,6 +137,8 @@ results.append({
     "f1": f1_score(y_val, forest_preds),
 })
 
+forest_cv_scores = cross_val_score(forest_pipeline, X_train, y_train, cv=cv, scoring="recall")
+print(f"Random forest CV recall: {forest_cv_scores.mean():.4f} (+/- {forest_cv_scores.std():.4f})")
 # print(f"\nRandom forest accuracy: {accuracy_score(y_val, forest_preds):.4f}")
 # print(classification_report(y_val, forest_preds, target_names=["no churn", "churn"]))
 
@@ -149,6 +157,8 @@ results.append({
     "f1": f1_score(y_val, xgb_preds),
 })
 
+xgb_cv_scores = cross_val_score(xgb_pipeline, X_train, y_train, cv=cv, scoring="recall")
+print(f"XGBoost CV recall: {xgb_cv_scores.mean():.4f} (+/- {xgb_cv_scores.std():.4f})")
 # print(f"\nXGBoost accuracy: {accuracy_score(y_val, xgb_preds):.4f}")
 # print(classification_report(y_val, xgb_preds, target_names=["no churn", "churn"]))
 
