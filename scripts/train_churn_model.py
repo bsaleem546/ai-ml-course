@@ -14,6 +14,8 @@ from sklearn.tree import DecisionTreeClassifier
 
 from sklearn.ensemble import RandomForestClassifier
 
+from xgboost import XGBClassifier
+
 DATA_PATH = "data/telco_churn.csv"  # update to wherever you saved it
 
 df = pd.read_csv(DATA_PATH)
@@ -100,3 +102,12 @@ forest_pipeline.fit(X_train, y_train)
 forest_preds = forest_pipeline.predict(X_val)
 print(f"\nRandom forest accuracy: {accuracy_score(y_val, forest_preds):.4f}")
 print(classification_report(y_val, forest_preds, target_names=["no churn", "churn"]))
+
+xgb_pipeline = Pipeline(steps=[
+    ("preprocessor", preprocessor),
+    ("classifier", XGBClassifier(n_estimators=100, max_depth=5, random_state=42, eval_metric="logloss")),
+])
+xgb_pipeline.fit(X_train, y_train)
+xgb_preds = xgb_pipeline.predict(X_val)
+print(f"\nXGBoost accuracy: {accuracy_score(y_val, xgb_preds):.4f}")
+print(classification_report(y_val, xgb_preds, target_names=["no churn", "churn"]))
