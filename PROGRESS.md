@@ -33,7 +33,7 @@ which does **not** travel with the repo — this file is the portable source of 
   so far), job states (queued/running/completed/failed), error persistence, idempotency,
   tests. All 16/16 tasks. Full build log in `README.md` under "Stage 1."
 
-### Stage 2: in progress (12/21 tasks done)
+### Stage 2: in progress (13/21 tasks done)
 
 **Done:**
 1. Choose a real tabular dataset — [Telco Customer Churn](https://raw.githubusercontent.com/IBM/telco-customer-churn-on-icp4d/master/data/Telco-Customer-Churn.csv)
@@ -50,6 +50,16 @@ which does **not** travel with the repo — this file is the portable source of 
 10. Train decision tree (`max_depth=5`) — accuracy 0.7926 (lower than logistic regression), but churn recall 0.62 (higher). First concrete example of "no single winner" between models — precision/recall tradeoff, not a strict improvement. Both models still miss ~40% of actual churners.
 11. Train random forest (`n_estimators=100, max_depth=5`) — accuracy 0.7898, but churn recall dropped to **0.42**, the worst of the three real models. Majority voting across trees biases toward the majority class ("no churn"), hurting minority-class (churn) recall — ensembling reduces variance but doesn't help class imbalance, can even worsen it.
 12. Train XGBoost (`n_estimators=100, max_depth=5`, untuned) — accuracy **0.7718** and churn recall **0.50**, the lowest accuracy of the four real models and worse recall than both logistic regression and the plain decision tree. Confirms "fancier algorithm" isn't automatically better: dataset is small (~4,900 train rows) and mostly linear, XGBoost defaults weren't tuned, and — the real underlying issue — **none of the four models handle class imbalance yet**, so all of them are biased toward predicting the majority class. That fix (class weights / resampling / threshold tuning) is intentionally still not applied; it's Stage 3 material.
+13. Compare model metrics — results collected into a `results` list (dicts of accuracy/precision/recall/f1 per model) and printed as one `pd.DataFrame` table at the end of the script instead of scattered per-model prints. Final validation-set comparison:
+
+   | model | accuracy | precision | recall | f1 |
+   |---|---|---|---|---|
+   | Logistic Regression | 0.8059 | 0.6459 | 0.5929 | 0.6183 |
+   | Decision Tree | 0.7926 | 0.6063 | 0.6214 | 0.6138 |
+   | Random Forest | 0.7898 | 0.6611 | 0.4250 | 0.5174 |
+   | XGBoost | 0.7718 | 0.5809 | 0.5000 | 0.5374 |
+
+   No single model wins every metric: best accuracy/F1 is Logistic Regression, best recall (catches the most actual churners) is Decision Tree, best precision (fewest false alarms) is Random Forest. This is the concrete evidence base for Stage 3's precision/recall-tradeoff and class-imbalance lessons.
 
 All of this lives in **`scripts/train_churn_model.py`** — a standalone script (not yet wired
 into the FastAPI app), run with `uv run python scripts/train_churn_model.py`. Deliberately
@@ -61,10 +71,8 @@ scikit-learn exploration is settled.
 have a blank/whitespace string (not a real `NaN`) for brand-new customers with `tenure=0`.
 Fixed with `pd.to_numeric(df["TotalCharges"], errors="coerce")` before anything else.
 
-**Next task:** "Compare model metrics" — summarize accuracy/precision/recall/F1 across all
-four models trained so far (baseline, logistic regression, decision tree, random forest,
-XGBoost) in one place, then: implement cross-validation, persist model artifacts, model
-metadata record, and finally the API tasks (`POST /models/train`, `GET /models/{id}`,
+**Next task:** "Implement cross-validation" — then persist model artifacts, model metadata
+record, and finally the API tasks (`POST /models/train`, `GET /models/{id}`,
 `GET /models/{id}/metrics`, `POST /models/{id}/predict`, inference validation/error handling).
 
 ## Working conventions established this build (read before continuing)
