@@ -1,4 +1,6 @@
 import pandas as pd
+import json
+from datetime import datetime, timezone
 from sklearn.model_selection import train_test_split
 
 from sklearn.compose import ColumnTransformer
@@ -170,3 +172,21 @@ print(results_df.to_string(index=False))
 
 joblib.dump(logreg_pipeline, "models/churn_logreg_pipeline.joblib")
 print("\nSaved model to models/churn_logreg_pipeline.joblib")
+
+logreg_metrics = next(r for r in results if r["model"] == "Logistic Regression")
+
+metadata = {
+    "model_name": "churn_logreg_pipeline",
+    "model_type": "LogisticRegression",
+    "trained_at": datetime.now(timezone.utc).isoformat(),
+    "dataset": DATA_PATH,
+    "train_rows": X_train.shape[0],
+    "val_rows": X_val.shape[0],
+    "metrics": logreg_metrics,
+    "cv_recall_mean": float(logreg_cv_scores.mean()),
+    "cv_recall_std": float(logreg_cv_scores.std()),
+}
+
+with open("models/churn_logreg_pipeline.metadata.json", "w") as f:
+    json.dump(metadata, f, indent=2)
+print("Saved metadata to models/churn_logreg_pipeline.metadata.json")

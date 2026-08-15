@@ -33,7 +33,7 @@ which does **not** travel with the repo — this file is the portable source of 
   so far), job states (queued/running/completed/failed), error persistence, idempotency,
   tests. All 16/16 tasks. Full build log in `README.md` under "Stage 1."
 
-### Stage 2: in progress (15/21 tasks done)
+### Stage 2: in progress (16/21 tasks done)
 
 **Done:**
 1. Choose a real tabular dataset — [Telco Customer Churn](https://raw.githubusercontent.com/IBM/telco-customer-churn-on-icp4d/master/data/Telco-Customer-Churn.csv)
@@ -100,9 +100,20 @@ scikit-learn exploration is settled.
 have a blank/whitespace string (not a real `NaN`) for brand-new customers with `tenure=0`.
 Fixed with `pd.to_numeric(df["TotalCharges"], errors="coerce")` before anything else.
 
-**Next task:** "Create model metadata record" — then the API tasks (`POST /models/train`,
-`GET /models/{id}`, `GET /models/{id}/metrics`, `POST /models/{id}/predict`, inference
-validation/error handling).
+16. Create model metadata record — `models/churn_logreg_pipeline.metadata.json` written
+   alongside the `.joblib` artifact: model type, UTC training timestamp, source dataset path,
+   train/val row counts, single-split metrics (accuracy/precision/recall/f1), and CV recall
+   mean/std. Sklearn's metric functions returned native Python floats in this environment (not
+   `numpy.float64`), so `json.dump` serialized directly without needing manual `float(...)`
+   casts on the `results` entries — only `cv_recall_mean`/`cv_recall_std` were explicitly cast
+   (defensive, in case that ever changes with a different sklearn version/build).
+
+**Next task:** the remaining Stage 2 API tasks — `POST /models/train`, `GET /models/{id}`,
+`GET /models/{id}/metrics`, `POST /models/{id}/predict`, and inference validation/error
+handling. This is the shift from "standalone script" to "wired into the FastAPI app" — will
+need a `Model`/`TrainedModel` DB table (similar to `Dataset`/`IngestionJob`) to track trained
+models, likely backed by the same `models/*.joblib` + `*.metadata.json` file convention
+established in this script.
 
 **Security note (joblib):** `joblib.load`/pickle-based formats can execute arbitrary code if
 loading an untrusted file. Fine here since we only ever load artifacts this same project
