@@ -16,6 +16,10 @@ from fastapi import BackgroundTasks
 from app.schemas.dataset import IngestionJobResponse
 from app.services import job_service
 
+from app.models.trained_model import TrainedModel
+from app.schemas.model import ModelMetrics, ModelResponse, ModelTrainRequest
+from app.services import model_service
+
 router = APIRouter()
 
 
@@ -82,3 +86,18 @@ async def upload_dataset(
 @router.get("/jobs/{job_id}", response_model=IngestionJobResponse)
 async def get_job(job_id: int, db: AsyncSession = Depends(get_db)) -> IngestionJob:
     return await job_service.get_job(db, job_id)
+
+
+@router.post("/models/train", response_model=ModelResponse, status_code=status.HTTP_201_CREATED)
+async def train_model(payload: ModelTrainRequest, db: AsyncSession = Depends(get_db)) -> TrainedModel:
+    return await model_service.train_churn_model(db, dataset_id=payload.dataset_id)
+
+
+@router.get("/models/{model_id}", response_model=ModelResponse)
+async def get_model(model_id: int, db: AsyncSession = Depends(get_db)) -> TrainedModel:
+    return await model_service.get_model(db, model_id)
+
+
+@router.get("/models/{model_id}/metrics", response_model=ModelMetrics)
+async def get_model_metrics(model_id: int, db: AsyncSession = Depends(get_db)) -> TrainedModel:
+    return await model_service.get_model(db, model_id)

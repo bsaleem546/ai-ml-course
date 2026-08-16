@@ -8,6 +8,7 @@ from app.logging_config import setup_logging
 from app.services.dataset_service import DatasetNotFoundError, InvalidFileError
 
 from app.services.job_service import JobNotFoundError
+from app.services.model_service import ModelNotFoundError
 
 
 logger = logging.getLogger(__name__)
@@ -43,6 +44,14 @@ async def invalid_file_handler(request: Request, exc: InvalidFileError) -> JSONR
     
 @app.exception_handler(JobNotFoundError)
 async def job_not_found_handler(request: Request, exc: JobNotFoundError) -> JSONResponse:
+    return JSONResponse(
+        status_code=status.HTTP_404_NOT_FOUND,
+        content={"detail": str(exc)},
+    )
+
+
+@app.exception_handler(ModelNotFoundError)
+async def model_not_found_handler(request: Request, exc: ModelNotFoundError) -> JSONResponse:
     return JSONResponse(
         status_code=status.HTTP_404_NOT_FOUND,
         content={"detail": str(exc)},
