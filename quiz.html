@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Roadmap Recall</title>
+<style>
+  :root {
+    --bg: #11161c;
+    --panel: #171d25;
+    --panel-2: #1d2530;
+    --border: #2b3542;
+    --text: #e7edf3;
+    --muted: #8fa0b3;
+    --accent: #5fb3a8;
+    --accent-soft: #234742;
+    --good: #7fc99b;
+    --good-soft: #1c3327;
+    --bad: #e2837e;
+    --bad-soft: #3a2222;
+    --amber: #d9a054;
+  }
+  :root[data-theme="light"] {
+    --bg: #f4f2ec;
+    --panel: #ffffff;
+    --panel-2: #ece8de;
+    --border: #d8d2c2;
+    --text: #23281f;
+    --muted: #6b6a5e;
+    --accent: #2f7d70;
+    --accent-soft: #dceae5;
+    --good: #2f7d4f;
+    --good-soft: #dcecdf;
+    --bad: #b0463f;
+    --bad-soft: #f3ddd9;
+    --amber: #a6742a;
+  }
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) {
+      --bg: #f4f2ec;
+      --panel: #ffffff;
+      --panel-2: #ece8de;
+      --border: #d8d2c2;
+      --text: #23281f;
+      --muted: #6b6a5e;
+      --accent: #2f7d70;
+      --accent-soft: #dceae5;
+      --good: #2f7d4f;
+      --good-soft: #dcecdf;
+      --bad: #b0463f;
+      --bad-soft: #f3ddd9;
+      --amber: #a6742a;
+    }
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+    line-height: 1.55;
+  }
+  .sans { font-family: -apple-system, "Segoe UI", Roboto, sans-serif; }
+  .mono { font-family: "SF Mono", "Cascadia Code", Consolas, monospace; font-variant-numeric: tabular-nums; }
+
+  .wrap { width: min(760px, calc(100% - 32px)); margin: 0 auto; }
+
+  header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: color-mix(in srgb, var(--bg) 92%, transparent);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--border);
+    padding: 18px 0;
+  }
+  .header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .brand-eyebrow {
+    font-family: inherit;
+    font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+    text-transform: uppercase;
+    letter-spacing: .14em;
+    font-size: .72rem;
+    color: var(--accent);
+    font-weight: 600;
+  }
+  h1 {
+    margin: 2px 0 0;
+    font-size: 1.7rem;
+    font-weight: 600;
+    text-wrap: balance;
+  }
+  .score-pill {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 8px 16px;
+    font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  .score-pill .num { font-size: 1.1rem; font-weight: 700; color: var(--accent); }
+  .score-pill .label { font-size: .78rem; color: var(--muted); }
+
+  .toolbar {
+    display: flex;
+    gap: 8px;
+    margin-top: 14px;
+    flex-wrap: wrap;
+    font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  .toolbar button {
+    border: 1px solid var(--border);
+    background: var(--panel);
+    color: var(--text);
+    border-radius: 8px;
+    padding: 7px 13px;
+    font-size: .82rem;
+    cursor: pointer;
+  }
+  .toolbar button:hover { border-color: var(--accent); color: var(--accent); }
+
+  main { padding: 32px 0 90px; }
+
+  .stage {
+    margin-bottom: 14px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+    background: var(--panel);
+  }
+  .stage-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 16px 20px;
+    cursor: pointer;
+  }
+  .stage-head:hover { background: var(--panel-2); }
+  .stage-title { display: flex; align-items: baseline; gap: 10px; }
+  .stage-num {
+    font-family: "SF Mono", Consolas, monospace;
+    font-size: .8rem;
+    color: var(--accent);
+    background: var(--accent-soft);
+    border-radius: 6px;
+    padding: 2px 7px;
+  }
+  .stage-name { font-size: 1.08rem; font-weight: 600; }
+  .stage-score {
+    font-family: "SF Mono", Consolas, monospace;
+    font-variant-numeric: tabular-nums;
+    font-size: .85rem;
+    color: var(--muted);
+  }
+  .chevron { color: var(--muted); transition: transform .15s ease; font-size: .8rem; }
+  .stage.open .chevron { transform: rotate(90deg); }
+
+  .stage-body { display: none; border-top: 1px solid var(--border); }
+  .stage.open .stage-body { display: block; }
+
+  .question {
+    padding: 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .question:last-child { border-bottom: none; }
+  .q-num {
+    font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-size: .72rem;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .q-text { font-size: 1.02rem; margin: 0 0 14px; text-wrap: balance; }
+
+  .options { display: flex; flex-direction: column; gap: 8px; }
+  .option {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    border: 1px solid var(--border);
+    background: var(--panel-2);
+    border-radius: 10px;
+    padding: 10px 14px;
+    cursor: pointer;
+    font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-size: .92rem;
+    transition: border-color .12s ease, background .12s ease;
+  }
+  .option:hover { border-color: var(--accent); }
+  .option input { margin-top: 3px; accent-color: var(--accent); flex: 0 0 auto; }
+  .option.correct { border-color: var(--good); background: var(--good-soft); }
+  .option.incorrect { border-color: var(--bad); background: var(--bad-soft); }
+  .option.disabled { cursor: default; }
+  .option.disabled:hover { border-color: var(--border); }
+  .option.correct:hover, .option.incorrect:hover { border-color: inherit; }
+
+  .explain {
+    display: none;
+    margin-top: 12px;
+    padding: 12px 14px;
+    border-left: 3px solid var(--accent);
+    background: var(--panel-2);
+    border-radius: 0 8px 8px 0;
+    font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-size: .88rem;
+    color: var(--muted);
+  }
+  .explain.show { display: block; }
+  .explain strong { color: var(--text); }
+
+  footer {
+    text-align: center;
+    color: var(--muted);
+    font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-size: .82rem;
+    padding: 20px 0 50px;
+  }
+
+  @media (max-width: 560px) {
+    h1 { font-size: 1.4rem; }
+    .stage-head { padding: 14px; }
+    .question { padding: 16px 14px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <div class="header-row">
+      <div>
+        <div class="brand-eyebrow">ai-ml-course &middot; self-check</div>
+        <h1>Roadmap Recall</h1>
+      </div>
+      <div class="score-pill">
+        <span class="num" id="scoreNum">0</span>
+        <span class="sans" style="color:var(--muted)">/</span>
+        <span class="num" id="scoreTotal">0</span>
+        <span class="label">answered correctly</span>
+      </div>
+    </div>
+    <div class="toolbar">
+      <button id="expandAll">Expand all</button>
+      <button id="collapseAll">Collapse all</button>
+      <button id="resetQuiz">Reset answers</button>
+    </div>
+  </header>
+
+  <main id="quizRoot"></main>
+
+  <footer>Covers Stages 0&ndash;3. Ask for a re-quiz after finishing a new stage to regenerate this page.</footer>
+</div>
+
+<script>
+const stages = [
+{
+  n: 0,
+  name: "Production Python Foundation",
+  questions: [
+    {
+      q: "Why does app/db.py connect with postgresql+asyncpg:// for the running app, but alembic/env.py uses the plain postgresql:// URL for migrations?",
+      options: [
+        "Alembic's default migration runner is synchronous (psycopg2-style); the app itself needs an async driver for FastAPI's event loop",
+        "asyncpg doesn't support running migrations at all",
+        "Alembic requires a different SSL certificate than the app",
+        "They're actually interchangeable and the difference doesn't matter"
+      ],
+      correct: 0,
+      explain: "Two different tools, two different concurrency models talking to the same database — the app needs async I/O to not block the event loop; Alembic's runner is plain synchronous code."
+    },
+    {
+      q: "In plain terms, what does async/await actually buy a FastAPI app?",
+      options: [
+        "It runs multiple Python threads at once for true parallelism",
+        "It lets a slow request (like a DB query) step aside so the server can handle other requests while waiting, instead of freezing everything",
+        "It skips Pydantic validation to save time",
+        "It automatically retries failed database calls"
+      ],
+      correct: 1,
+      explain: "await marks the exact point a function can pause and hand control back to the event loop during slow I/O — that's what lets one process serve many requests concurrently."
+    },
+    {
+      q: "Why did docker compose exec api uv run alembic upgrade head need to be run separately from the same command on the host?",
+      options: [
+        "Docker containers can't run Alembic at all",
+        "The Docker Postgres container and the hosted Neon Postgres are two entirely separate databases — each needs migrations applied to it independently",
+        "It's the exact same database; running it twice was pointless but harmless",
+        "Alembic migrations automatically sync across environments"
+      ],
+      correct: 1,
+      explain: "Same migration files, but two physically different databases (local Docker Postgres vs. hosted Neon) each keep their own independent 'current revision' state."
+    },
+    {
+      q: "What's the real difference between the unit tests and integration tests built in this project?",
+      options: [
+        "Unit tests are just shorter versions of integration tests",
+        "Unit tests mock out dependencies (like the repository) to test one function in isolation; integration tests send real HTTP requests through the real API into a real database",
+        "Integration tests don't use pytest",
+        "There's no meaningful difference between them"
+      ],
+      correct: 1,
+      explain: "Unit tests answer 'does this logic behave correctly given certain inputs?'; integration tests answer 'does the whole path actually work end to end?' — both are needed because a passing unit test can't catch a broken SQL query."
+    },
+    {
+      q: "Why did docker compose restart fail to pick up code changes, requiring docker compose up --build -d instead?",
+      options: [
+        "restart is broken in Docker Compose and should never be used",
+        "The Dockerfile bakes source code into the image at build time (COPY . .) — restarting just relaunches the existing image, which still has the old code",
+        "Restarting always clears the database by accident",
+        "It wasn't actually necessary, --build was just a habit"
+      ],
+      correct: 1,
+      explain: "There's no live volume syncing local file edits into the container — any code, dependency, or migration change needs a rebuild to actually reach the running container."
+    },
+    {
+      q: "Why does GET /health return 200 even if the database is completely down, while GET /ready correctly returns 500 in that case?",
+      options: [
+        "/health silently ignores errors",
+        "/health checks only 'is the process alive' (liveness) on purpose, with zero dependencies touched; /ready checks a real dependency (the DB) to answer 'can this instance actually serve traffic'",
+        "They are configured identically and this is a bug",
+        "/ready is cached and /health is not"
+      ],
+      correct: 1,
+      explain: "Liveness vs. readiness is a deliberate distinction: a container can be alive but not ready to serve traffic (e.g. DB connection lost) — you don't want it killed, but you also don't want traffic routed to it."
+    }
+  ]
+},
+{
+  n: 1,
+  name: "Data Ingestion & Data Engineering",
+  questions: [
+    {
+      q: "Why is python-multipart a required dependency for the CSV upload endpoint, even though no file in the codebase imports it directly?",
+      options: [
+        "FastAPI's Form/File/UploadFile machinery needs it internally to parse multipart/form-data requests",
+        "It's only used by the test suite",
+        "It's required for JSON body parsing",
+        "It replaces pydantic-settings"
+      ],
+      correct: 0,
+      explain: "FastAPI raises a runtime error at startup if you use Form/File/UploadFile without this installed — it's a silent dependency of a feature, not something you import yourself."
+    },
+    {
+      q: "Why does the upload endpoint store files as <uuid>_<original filename> instead of just the original filename?",
+      options: [
+        "To make the filenames shorter",
+        "To avoid collisions on disk if two different uploads happen to share the same original filename",
+        "UUIDs are mandated by the CSV format",
+        "It's purely a security-through-obscurity measure with no functional purpose"
+      ],
+      correct: 1,
+      explain: "The original filename is still shown to API clients via the `filename` field — the UUID prefix only affects the internal storage path, guaranteeing uniqueness on disk."
+    },
+    {
+      q: "In a tiny 4-row test, a city column with only 3 unique values got classified as \"text\" instead of \"categorical.\" Why?",
+      options: [
+        "A bug in the classification code",
+        "The unique-value ratio (3 unique / 4 rows = 75%) was above the 50% categorical threshold — the heuristic needs a realistically large dataset to behave sensibly",
+        "City names are hardcoded to always be text",
+        "The column had missing values, which forced it to text"
+      ],
+      correct: 1,
+      explain: "Verified later against a real 1000-row dataset: Country (240 unique / 1000 rows = 24%) correctly landed as categorical — the heuristic works, it just needs real scale."
+    },
+    {
+      q: "Why does run_ingestion_job() open its own brand-new async_session_factory() database session instead of reusing the session from the original HTTP request?",
+      options: [
+        "It's a purely stylistic choice with no functional reason",
+        "The request's DB session closes once the response is sent, but the background task keeps running after that — reusing a closed session would fail",
+        "FastAPI forbids reusing sessions across functions",
+        "New sessions are required for logging to work"
+      ],
+      correct: 1,
+      explain: "Every background task needs its own fresh session precisely because it outlives the request/response cycle that the original session was scoped to."
+    },
+    {
+      q: "What does the idempotency guard \"if job is None or job.status != QUEUED: return\" actually protect against?",
+      options: [
+        "SQL injection attacks",
+        "Re-processing an already-completed (or already-running) job if the background task somehow gets triggered more than once",
+        "Users uploading non-CSV files",
+        "The database running out of connections"
+      ],
+      correct: 1,
+      explain: "Verified directly: manually re-invoking run_ingestion_job() on a completed job did nothing, because its status was no longer 'queued' — proving the guard works."
+    },
+    {
+      q: "Why does POST /datasets/upload return 202 Accepted with a job id, rather than 201 Created with the finished, profiled dataset?",
+      options: [
+        "202 is a required status code for any file upload",
+        "Processing happens in the background after the response is already sent — the profile isn't ready yet, so 202 correctly signals 'accepted, not finished' while the client polls the job",
+        "201 was deprecated by FastAPI",
+        "There's no meaningful difference between the two status codes"
+      ],
+      correct: 1,
+      explain: "201 means 'the thing now fully exists.' 202 specifically means 'request accepted, processing not finished' — the honest status for a background-job kickoff."
+    }
+  ]
+},
+{
+  n: 2,
+  name: "Classical Machine Learning",
+  questions: [
+    {
+      q: "Why split the data into train / validation / test (70/15/15) instead of just train / test?",
+      options: [
+        "Three-way splits are a hard requirement of scikit-learn",
+        "The validation set gets used repeatedly while comparing and tuning models; the test set stays completely untouched until one final, honest check at the end",
+        "It effectively doubles the amount of usable data",
+        "Validation and test sets are just two names for the same thing"
+      ],
+      correct: 1,
+      explain: "Repeatedly checking performance against the test set while tuning is implicitly 'cheating' — you'd be tuning to the test set, defeating its purpose as an honest final check."
+    },
+    {
+      q: "Why was the preprocessing pipeline (ColumnTransformer) fit only on X_train, never on the full dataset before splitting?",
+      options: [
+        "Fitting on more data is always slower, so it's a performance shortcut",
+        "Fitting on validation/test data would let the model's preprocessing 'see' information it shouldn't have access to yet — a form of data leakage",
+        "scikit-learn technically forbids fitting on more than one split",
+        "X_train happens to always be the largest split, so it was arbitrary"
+      ],
+      correct: 1,
+      explain: "The imputer's median values and the encoder's known categories must come only from training data — otherwise validation/test performance would be an overly optimistic, leaked estimate."
+    },
+    {
+      q: "The Random Forest scored worse on churn recall (0.425) than a single Decision Tree (0.621), despite being the more sophisticated ensemble method. Why?",
+      options: [
+        "A bug in the random forest configuration",
+        "Majority voting across many trees biases predictions toward the majority class ('no churn'), which specifically hurts minority-class (churn) recall — more sophisticated isn't automatically better",
+        "Random forests are fundamentally incompatible with tabular data",
+        "It was trained on a smaller subset of the data than the tree"
+      ],
+      correct: 1,
+      explain: "Ensembling reduces variance (instability from any one tree's quirks) but doesn't automatically help with class imbalance — it can make minority-class detection worse."
+    },
+    {
+      q: "What did 5-fold cross-validation reveal that a single train/val split ranking got wrong?",
+      options: [
+        "Nothing — the CV ranking matched the single-split ranking exactly",
+        "The Decision Tree's single-split recall (0.621) looked best but had the widest variation across folds (unstable, partly luck); XGBoost looked worst on the single split but had a better, more stable average across folds",
+        "Cross-validation only works for logistic regression",
+        "XGBoost cannot technically be cross-validated"
+      ],
+      correct: 1,
+      explain: "A single split isn't trustworthy enough to rank models on its own — this is exactly why cross-validation exists as a roadmap task in the first place."
+    },
+    {
+      q: "Why save the whole scikit-learn Pipeline (preprocessor + classifier together) with joblib, instead of just the trained classifier alone?",
+      options: [
+        "joblib technically requires saving a full Pipeline object",
+        "Loading it back gives one object that handles raw input end-to-end (impute, encode, scale, then predict) — no need to separately re-fit and keep a matching preprocessor in sync",
+        "It produces a smaller file on disk",
+        "A bare classifier object cannot be serialized at all"
+      ],
+      correct: 1,
+      explain: "This is exactly what made the /predict endpoint simple later — one joblib.load() call gets back something ready to take raw customer data directly."
+    },
+    {
+      q: "In the predict endpoint, why derive expected_columns from pipeline.feature_names_in_ instead of hardcoding the 19 column names?",
+      options: [
+        "Hardcoded lists aren't supported in Python type hints",
+        "It makes the validation logic correct for whatever features the actual trained model expects — the model itself is the source of truth, not a list that could drift out of sync",
+        "feature_names_in_ runs faster than a hardcoded list",
+        "There's no real difference between the two approaches"
+      ],
+      correct: 1,
+      explain: "If a future model were trained on a different dataset with different columns, this same validation function would still work correctly without any code changes."
+    }
+  ]
+},
+{
+  n: 3,
+  name: "ML Failure Lab",
+  questions: [
+    {
+      q: "What single number actually reveals whether a model is overfitting, as opposed to just checking if validation accuracy looks decent?",
+      options: [
+        "The absolute validation accuracy on its own",
+        "The gap between training accuracy and validation accuracy — a large gap (train much higher than val) is the real signature of overfitting",
+        "The total number of features used",
+        "How long the model took to train"
+      ],
+      correct: 1,
+      explain: "An unbounded tree scored 99.8% train / 72.9% val — a 26.87-point gap, and worse than the baseline on val despite near-perfect training performance."
+    },
+    {
+      q: "The max_depth=1 'underfit' model had a near-zero train/val gap (0.0002). Why doesn't that make it a good model?",
+      options: [
+        "It actually is a good model — small gap always means good",
+        "A small gap only proves the model is *consistent* between train and val; if both scores are mediocre (barely above baseline), it's underfitting, not 'good' — you need both a small gap and genuinely strong scores",
+        "The gap calculation itself was wrong",
+        "Small gaps always indicate a coding bug"
+      ],
+      correct: 1,
+      explain: "Contrast with max_depth=5: gap 0.0078 (small) AND val accuracy 0.7946 (genuinely good) — that combination, not the gap alone, is what you actually want."
+    },
+    {
+      q: "Adding a synthetic 'CancellationRequestFiled' feature (built to be ~95% identical to the true label) pushed validation accuracy to 95.6%. Why is that a problem rather than a win?",
+      options: [
+        "It isn't a problem — higher accuracy is always better",
+        "The feature was essentially the answer key in disguise — a field that would only exist in reality *because* a customer already churned, so it wouldn't genuinely be available before the prediction is needed; in production this model would be useless despite the great-looking metric",
+        "The validation set was simply too small to trust",
+        "95.6% accuracy is mathematically impossible and indicates a calculation error"
+      ],
+      correct: 1,
+      explain: "Removing the feature dropped accuracy back to exactly 0.7946, proving the entire 16-point jump came from that one leaking column."
+    },
+    {
+      q: "The model trained on only 5% churn examples still showed a decent ROC-AUC (0.80) despite catastrophic recall (0.025) at the default threshold. Why don't these two numbers contradict each other?",
+      options: [
+        "They do contradict each other — one of the two metrics must be wrong",
+        "ROC-AUC measures ranking ability across every possible threshold, not correctness at one fixed cutoff — the model still ranked real churners as relatively higher-risk, it just learned to output uniformly low probabilities, so almost nothing crossed the default 0.5 cutoff (a calibration problem, not a ranking problem)",
+        "AUC and recall measure identical things and should always match exactly",
+        "The AUC calculation used a different validation set by mistake"
+      ],
+      correct: 1,
+      explain: "This distinction directly explains why threshold tuning (lowering the cutoff) could partially rescue this specific model's recall without any retraining."
+    },
+    {
+      q: "Checking feature importance independently confirmed the leakage bug, even without looking at the accuracy gap. How?",
+      options: [
+        "It didn't actually confirm anything new",
+        "The leaked feature accounted for 92% of the model's total feature importance — a single feature dominating that heavily is itself a red flag, caught through a completely separate diagnostic method",
+        "Feature importance cannot detect leakage in principle",
+        "This technique only works for logistic regression, not decision trees"
+      ],
+      correct: 1,
+      explain: "Compare to the honest model, where even the top feature (Contract_Month-to-month) only reached 51% importance — one feature eating 92% is a visible outlier on its own."
+    },
+    {
+      q: "Simulating a 20% price increase on validation data (with true labels left unchanged) mostly hurt precision while recall stayed nearly flat. Why?",
+      options: [
+        "This result is essentially random noise with no real explanation",
+        "Inflated charge values pushed more customers across the tree's learned 'high risk' decision thresholds, so the model flagged churn more often overall — catching roughly the same real churners (flat recall) but with more false alarms mixed in (precision drop)",
+        "Precision and recall are mathematically required to always move in opposite directions",
+        "The model was silently retrained on the shifted data before evaluation"
+      ],
+      correct: 1,
+      explain: "The StandardScaler and the tree's split thresholds were calibrated to the *original* charge distribution — systematically shifted inputs don't just scale predictions proportionally."
+    },
+    {
+      q: "Why is distribution shift considered more dangerous in production than overfitting or leakage, even though its measured impact here was smaller?",
+      options: [
+        "It isn't actually more dangerous — this is a misconception",
+        "Overfitting shows up as a visible train/val gap, and leakage shows up as suspiciously perfect metrics — but distribution shift causes quiet, gradual decay with no obvious single-snapshot red flag, so it's only caught by monitoring performance over time",
+        "Distribution shift always causes larger accuracy drops than any other failure mode",
+        "It can only ever be detected by recalculating ROC-AUC"
+      ],
+      correct: 1,
+      explain: "This is exactly why real production ML systems need ongoing drift monitoring and periodic retraining, not a train-once-and-forget approach."
+    }
+  ]
+}
+];
+
+const STORAGE_KEY = "roadmap-recall-answers-v1";
+let state = {};
+try { state = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; } catch { state = {}; }
+
+function questionKey(stageIdx, qIdx) { return stageIdx + ":" + qIdx; }
+
+function save() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  updateScore();
+}
+
+function totalQuestions() {
+  return stages.reduce((sum, s) => sum + s.questions.length, 0);
+}
+
+function correctCount() {
+  let count = 0;
+  stages.forEach((s, si) => {
+    s.questions.forEach((q, qi) => {
+      const picked = state[questionKey(si, qi)];
+      if (picked !== undefined && picked === q.correct) count++;
+    });
+  });
+  return count;
+}
+
+function updateScore() {
+  document.getElementById("scoreNum").textContent = correctCount();
+  document.getElementById("scoreTotal").textContent = totalQuestions();
+  stages.forEach((s, si) => {
+    let answered = 0, correct = 0;
+    s.questions.forEach((q, qi) => {
+      const picked = state[questionKey(si, qi)];
+      if (picked !== undefined) { answered++; if (picked === q.correct) correct++; }
+    });
+    const el = document.getElementById("stageScore-" + si);
+    if (el) el.textContent = correct + "/" + s.questions.length + " correct";
+  });
+}
+
+function renderOptions(si, qi, q) {
+  const picked = state[questionKey(si, qi)];
+  return q.options.map((opt, oi) => {
+    let cls = "option";
+    if (picked !== undefined) {
+      cls += " disabled";
+      if (oi === q.correct) cls += " correct";
+      else if (oi === picked) cls += " incorrect";
+    }
+    const checked = picked === oi ? "checked" : "";
+    const disabled = picked !== undefined ? "disabled" : "";
+    return `<label class="${cls}" data-stage="${si}" data-q="${qi}" data-opt="${oi}">
+      <input type="radio" name="q-${si}-${qi}" ${checked} ${disabled}>
+      <span>${opt}</span>
+    </label>`;
+  }).join("");
+}
+
+function renderQuestion(si, qi, q) {
+  const picked = state[questionKey(si, qi)];
+  const explainClass = picked !== undefined ? "explain show" : "explain";
+  return `<div class="question">
+    <div class="q-num sans">Question ${qi + 1} of ${stages[si].questions.length}</div>
+    <p class="q-text">${q.q}</p>
+    <div class="options">${renderOptions(si, qi, q)}</div>
+    <div class="${explainClass}"><strong>${picked === q.correct ? "Correct. " : (picked !== undefined ? "Not quite. " : "")}</strong>${q.explain}</div>
+  </div>`;
+}
+
+function renderStage(s, si) {
+  let answered = 0, correct = 0;
+  s.questions.forEach((q, qi) => {
+    const picked = state[questionKey(si, qi)];
+    if (picked !== undefined) { answered++; if (picked === q.correct) correct++; }
+  });
+  return `<section class="stage" data-stage="${si}">
+    <div class="stage-head">
+      <div class="stage-title">
+        <span class="stage-num">Stage ${s.n}</span>
+        <span class="stage-name">${s.name}</span>
+      </div>
+      <div style="display:flex; align-items:center; gap:12px;">
+        <span class="stage-score mono" id="stageScore-${si}">${correct}/${s.questions.length} correct</span>
+        <span class="chevron">&#9656;</span>
+      </div>
+    </div>
+    <div class="stage-body">
+      ${s.questions.map((q, qi) => renderQuestion(si, qi, q)).join("")}
+    </div>
+  </section>`;
+}
+
+function render() {
+  const root = document.getElementById("quizRoot");
+  root.innerHTML = stages.map(renderStage).join("");
+
+  document.querySelectorAll(".stage-head").forEach(head => {
+    head.addEventListener("click", () => head.parentElement.classList.toggle("open"));
+  });
+
+  document.querySelectorAll(".option:not(.disabled)").forEach(opt => {
+    opt.addEventListener("click", () => {
+      const si = parseInt(opt.dataset.stage, 10);
+      const qi = parseInt(opt.dataset.q, 10);
+      const oi = parseInt(opt.dataset.opt, 10);
+      state[questionKey(si, qi)] = oi;
+      save();
+      render();
+      const stageEl = document.querySelector(`.stage[data-stage="${si}"]`);
+      if (stageEl) stageEl.classList.add("open");
+    });
+  });
+
+  updateScore();
+}
+
+document.getElementById("expandAll").addEventListener("click", () => {
+  document.querySelectorAll(".stage").forEach(s => s.classList.add("open"));
+});
+document.getElementById("collapseAll").addEventListener("click", () => {
+  document.querySelectorAll(".stage").forEach(s => s.classList.remove("open"));
+});
+document.getElementById("resetQuiz").addEventListener("click", () => {
+  if (confirm("Clear all your answers on this quiz?")) {
+    state = {};
+    save();
+    render();
+  }
+});
+
+render();
+</script>
+
+</body>
+</html>
