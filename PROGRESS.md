@@ -152,7 +152,7 @@ correct mount target (matches `MODEL_DIR = Path("models")` in `model_service.py`
 against the `Dockerfile`'s `WORKDIR /app`) — then trained a model, rebuilt, and confirmed both
 the `.joblib` file and a live prediction against it survived.
 
-## Stage 2 is complete (21/21). In progress: Stage 3 — ML Failure Lab (11/17 tasks done)
+## Stage 2 is complete (21/21). In progress: Stage 3 — ML Failure Lab (12/17 tasks done)
 
 Deliberately break models and diagnose why — overfitting, underfitting, data leakage, class
 imbalance, precision/recall tradeoffs, threshold tuning, confusion matrices, ROC-AUC, feature
@@ -260,11 +260,23 @@ it to a new `Pipeline`.
     retention outreach. Makes the abstract "2.5% recall" number concrete as an actual count
     of missed customers rather than a percentage.
 
-**Next task:** "Experiment with classification thresholds" — so far every prediction has used
-scikit-learn's default 0.5 probability threshold for "predict churn." This task explores
-what happens to precision/recall/F1 as that threshold is moved — e.g. lowering it to catch
-more churners at the cost of more false alarms — directly relevant to the imbalance-trained
-model's near-zero recall problem.
+12. Experiment with classification thresholds — swept threshold `[0.1..0.9]` on
+    `clean_pipeline.predict_proba(X_val)[:, 1]` instead of using `.predict()`'s baked-in 0.5
+    cutoff. Clear precision/recall tradeoff: threshold 0.1 → recall 0.964/precision 0.386;
+    threshold 0.9 → precision 1.0/recall 0.002. **F1 peaks near threshold 0.3 (0.6076)**,
+    marginally above the default 0.5 (0.6070) — a flat plateau from ~0.2-0.5, sharp drop-off
+    after. Noted: thresholds 0.6 and 0.7 gave identical results — a decision tree only outputs
+    a handful of distinct leaf probabilities, so threshold changes within a gap between two
+    leaf values have zero effect (unlike logistic regression's continuous probability output).
+    Also a small (~0.005) precision discrepancy at threshold=0.5 vs. `clean_pipeline.predict()`'s
+    own reported precision — attributed to tie-breaking on a leaf with an exact 50/50 split,
+    not a bug. Practical link back to the imbalance experiment: threshold lowering is a
+    retrain-free way to partially rescue a low-recall model, distinct from fixing the
+    training data itself.
+
+**Next task:** "Compare ROC-AUC across models" — a threshold-independent way to compare
+overall ranking quality between models (e.g. the honest model vs. the 5%-imbalance-trained
+one), rather than committing to one fixed threshold like the sweep above.
 
 **Security note (joblib):** `joblib.load`/pickle-based formats can execute arbitrary code if
 loading an untrusted file. Fine here since we only ever load artifacts this same project

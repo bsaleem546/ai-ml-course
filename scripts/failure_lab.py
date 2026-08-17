@@ -271,3 +271,22 @@ def print_confusion(name, pipeline, X_eval, y_eval):
 
 print_confusion("Honest (max_depth=5, natural imbalance)", clean_pipeline, X_val, y_val)
 print_confusion("Trained on 5% churn rate", imb_pipeline, X_val, y_val)
+
+
+print("\n=== Threshold sweep (honest model) ===")
+
+probs = clean_pipeline.predict_proba(X_val)[:, 1]
+thresholds = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
+threshold_results = []
+
+for t in thresholds:
+    preds_at_t = (probs >= t).astype(int)
+    threshold_results.append({
+        "threshold": t,
+        "precision": precision_score(y_val, preds_at_t, zero_division=0),
+        "recall": recall_score(y_val, preds_at_t, zero_division=0),
+        "f1": f1_score(y_val, preds_at_t, zero_division=0),
+    })
+
+threshold_df = pd.DataFrame(threshold_results)
+print(threshold_df.to_string(index=False))
