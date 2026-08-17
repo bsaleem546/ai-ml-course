@@ -49,3 +49,28 @@ print("=== Overfit decision tree (unbounded depth) ===")
 print(f"Train accuracy: {train_acc:.4f}")
 print(f"Val accuracy:   {val_acc:.4f}")
 print(f"Gap:            {train_acc - val_acc:.4f}")
+
+
+print("\n=== Complexity sweep (max_depth) ===")
+depths = [1, 2, 3, 5, 10, 20, None]
+complexity_results = []
+
+for depth in depths:
+    pipeline = Pipeline(steps=[
+        ("preprocessor", preprocessor),
+        ("classifier", DecisionTreeClassifier(max_depth=depth, min_samples_leaf=1, random_state=42)),
+    ])
+    pipeline.fit(X_train, y_train)
+
+    train_acc = accuracy_score(y_train, pipeline.predict(X_train))
+    val_acc = accuracy_score(y_val, pipeline.predict(X_val))
+
+    complexity_results.append({
+        "max_depth": depth if depth is not None else "unbounded",
+        "train_acc": train_acc,
+        "val_acc": val_acc,
+        "gap": train_acc - val_acc,
+    })
+
+complexity_df = pd.DataFrame(complexity_results)
+print(complexity_df.to_string(index=False))
