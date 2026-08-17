@@ -152,15 +152,33 @@ correct mount target (matches `MODEL_DIR = Path("models")` in `model_service.py`
 against the `Dockerfile`'s `WORKDIR /app`) — then trained a model, rebuilt, and confirmed both
 the `.joblib` file and a live prediction against it survived.
 
-## Stage 2 is complete. Next: Stage 3 — ML Failure Lab
+## Stage 2 is complete (21/21). In progress: Stage 3 — ML Failure Lab (2/17 tasks done)
 
 Deliberately break models and diagnose why — overfitting, underfitting, data leakage, class
 imbalance, precision/recall tradeoffs, threshold tuning, confusion matrices, ROC-AUC, feature
 importance, distribution shift. Stage 2 already surfaced most of the raw material this stage
-will dig into: class imbalance (~26.5% churn rate) that every model struggled with, the
-random forest's majority-vote bias hurting minority-class recall, and the cross-validation
-finding that a single train/val split ranking (decision tree "winning" on recall) was
-partly luck/unstable compared to the CV mean.
+digs into: class imbalance (~26.5% churn rate) that every model struggled with, the random
+forest's majority-vote bias hurting minority-class recall, and the cross-validation finding
+that a single train/val split ranking (decision tree "winning" on recall) was partly
+luck/unstable compared to the CV mean.
+
+All Stage 3 work lives in a new **`scripts/failure_lab.py`** (separate from
+`scripts/train_churn_model.py` — deliberately: Stage 2's script is a training/comparison
+pipeline, Stage 3 is a series of diagnostic experiments, different purpose).
+
+**Done:**
+1. Create a deliberately overfit model — `DecisionTreeClassifier(max_depth=None, min_samples_leaf=1)`,
+   no complexity limits, on the same train/val split pattern as Stage 2.
+2. Compare training and validation performance — train accuracy **0.9980** (near-perfect,
+   the tree memorized individual training rows) vs. val accuracy **0.7293**, a **26.87-point
+   gap**. Notably, val accuracy here is *worse* than Stage 2's majority-class baseline
+   (0.7348) — despite near-perfect training performance, the overfit model is actually worse
+   than doing nothing on new data. Stage 2's properly-capped tree (`max_depth=5`) scored
+   0.7926 val accuracy for comparison — less "training performance," better real performance.
+
+**Next task:** "Reduce model complexity and compare results" — sweep `max_depth` across
+several values (e.g. 2, 5, 10, 20, unbounded) and observe how the train/val gap changes with
+complexity, turning the single overfit example into a demonstrated relationship.
 
 **Security note (joblib):** `joblib.load`/pickle-based formats can execute arbitrary code if
 loading an untrusted file. Fine here since we only ever load artifacts this same project
