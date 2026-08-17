@@ -152,7 +152,7 @@ correct mount target (matches `MODEL_DIR = Path("models")` in `model_service.py`
 against the `Dockerfile`'s `WORKDIR /app`) — then trained a model, rebuilt, and confirmed both
 the `.joblib` file and a live prediction against it survived.
 
-## Stage 2 is complete (21/21). In progress: Stage 3 — ML Failure Lab (5/17 tasks done)
+## Stage 2 is complete (21/21). In progress: Stage 3 — ML Failure Lab (7/17 tasks done)
 
 Deliberately break models and diagnose why — overfitting, underfitting, data leakage, class
 imbalance, precision/recall tradeoffs, threshold tuning, confusion matrices, ROC-AUC, feature
@@ -205,10 +205,22 @@ pipeline, Stage 3 is a series of diagnostic experiments, different purpose).
    matters more for models that *can't* naturally combine features (e.g. logistic regression)
    than for trees — not verified yet, a good candidate for a future experiment.
 
-**Next task:** "Introduce target leakage intentionally" — deliberately add a feature that
-"leaks" information from the target/future into the training data (a classic real-world bug),
-observe the unrealistically good validation performance it produces, then remove it and
-confirm performance drops back to honest levels.
+6. Introduce target leakage intentionally + 7. Observe unrealistically high validation
+   performance — simulated a realistic leak: `CancellationRequestFiled`, a synthetic column
+   ~95% equal to the true `Churn` label (5% randomly flipped noise), representing a real
+   scenario (a field that only gets populated *because* a customer is already churning, so it
+   wouldn't genuinely be available before the outcome). Added at `max_depth=5` (same capacity
+   as the honest baseline, isolating the leak as the only variable). Result: val accuracy
+   jumped from **0.7946 (honest) to 0.9560 (leaked)** — a 16-point jump, landing almost
+   exactly at the 95% "correctness" the leaked feature was built with, strong evidence the
+   model largely just learned to repeat that one column back. Key insight documented: leakage
+   is invisible to train/val-gap checks and cross-validation (the leak is present equally in
+   both splits) — the only real defense is asking "would this feature genuinely be available
+   before the prediction is needed, in production?", not a metric-based check.
+
+**Next task:** "Remove the leaked feature and retest" — drop `CancellationRequestFiled` and
+confirm performance falls back to the honest ~0.79 val accuracy, closing the leakage
+experiment loop.
 
 **Security note (joblib):** `joblib.load`/pickle-based formats can execute arbitrary code if
 loading an untrusted file. Fine here since we only ever load artifacts this same project

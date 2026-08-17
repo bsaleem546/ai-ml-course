@@ -7,6 +7,8 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from sklearn.tree import DecisionTreeClassifier
 
+import numpy as np
+
 DATA_PATH = "data/telco_churn.csv"
 
 df = pd.read_csv(DATA_PATH)
@@ -139,3 +141,43 @@ fe_d3_val_acc = accuracy_score(y_val, fe_pipeline_d3.predict(X_val_fe))
 print(f"Train accuracy: {fe_d3_train_acc:.4f}")
 print(f"Val accuracy:   {fe_d3_val_acc:.4f}")
 print(f"(vs. non-engineered max_depth=3 from sweep: train 0.7915, val 0.7875)")
+
+
+print("\n=== Target leakage experiment ===")
+
+rng = np.random.default_rng(42)
+
+def add_leaked_feature(X_split, y_split):
+    X_split = X_split.copy()
+    noisy_label = y_split.copy()
+    flip_mask = rng.random(len(y_split)) < 0.05
+    noisy_label = noisy_label.mask(pd.Series(flip_mask, index=y_split.index), 1 - noisy_label)
+    X_split["CancellationRequestFiled"] = noisy_label
+    return X_split
+
+X_train_leak = add_leaked_feature(X_train, y_train)
+X_val_leak = add_leaked_feature(X_val, y_val)
+
+numeric_features_leak = numeric_features + ["CancellationRequestFiled"]
+preprocessor_leak = ColumnTransformer(transformers=[
+    ("numeric", Pipeline([
+        ("imputer", SimpleImputer(strategy="median")),
+        ("scaler", StandardScaler()),
+    ]), numeric_features_leak),
+    ("categorical", Pipeline([
+        ("imputer", SimpleImputer(strategy="most_frequent")),
+        ("encoder", OneHotEncoder(handle_unknown="ignore")),
+    ]), categorical_features),
+])
+
+leaky_pipeline = Pipeline(steps=[
+    ("preprocessor", preprocessor_leak),
+    ("classifier", DecisionTreeClassifier(max_depth=5, random_state=42)),
+])
+leaky_pipeline.fit(X_train_leak, y_train)
+
+leaky_train_acc = accuracy_score(y_train, leaky_pipeline.predict(X_train_leak))
+leaky_val_acc = accuracy_score(y_val, leaky_pipeline.predict(X_val_leak))
+
+print(f"WITH leaked feature — train: {leaky_train_acc:.4f}, val: {leaky_val_acc:.4f}")
+print(f"(honest max_depth=5 from sweep, no leak — train: 0.8024, val: 0.7946)")
