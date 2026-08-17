@@ -152,7 +152,7 @@ correct mount target (matches `MODEL_DIR = Path("models")` in `model_service.py`
 against the `Dockerfile`'s `WORKDIR /app`) — then trained a model, rebuilt, and confirmed both
 the `.joblib` file and a live prediction against it survived.
 
-## Stage 2 is complete (21/21). In progress: Stage 3 — ML Failure Lab (10/17 tasks done)
+## Stage 2 is complete (21/21). In progress: Stage 3 — ML Failure Lab (11/17 tasks done)
 
 Deliberately break models and diagnose why — overfitting, underfitting, data leakage, class
 imbalance, precision/recall tradeoffs, threshold tuning, confusion matrices, ROC-AUC, feature
@@ -253,9 +253,18 @@ because they always happened to be refit on identical data each time — not som
 on going forward. General rule adopted: always `clone()` a shared transformer before handing
 it to a new `Pipeline`.
 
-**Next task:** "Generate a confusion matrix" — will make the "2.5% recall" number visceral by
-showing the actual counts (how many churners were correctly caught vs. missed vs. false
-alarms), rather than a single collapsed recall number.
+11. Generate a confusion matrix — `confusion_matrix(...).ravel()` (order: `tn, fp, fn, tp`)
+    for both the honest and 5%-imbalance-trained models. Honest: TN 1340, FP 212, FN 222, TP
+    339 — reasonably balanced. 5%-imbalance: TN 1549, FP 3, FN **547**, TP 14 — of 561 actual
+    churners, only 14 were caught; 547 real customers who churned would have received zero
+    retention outreach. Makes the abstract "2.5% recall" number concrete as an actual count
+    of missed customers rather than a percentage.
+
+**Next task:** "Experiment with classification thresholds" — so far every prediction has used
+scikit-learn's default 0.5 probability threshold for "predict churn." This task explores
+what happens to precision/recall/F1 as that threshold is moved — e.g. lowering it to catch
+more churners at the cost of more false alarms — directly relevant to the imbalance-trained
+model's near-zero recall problem.
 
 **Security note (joblib):** `joblib.load`/pickle-based formats can execute arbitrary code if
 loading an untrusted file. Fine here since we only ever load artifacts this same project

@@ -8,6 +8,7 @@ from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.dummy import DummyClassifier
 from sklearn.base import clone
+from sklearn.metrics import confusion_matrix
 
 import numpy as np
 
@@ -256,3 +257,17 @@ metric_comparison = pd.DataFrame([
 ])
 
 print(metric_comparison.to_string(index=False))
+
+print("\n=== Confusion matrices ===")
+
+def print_confusion(name, pipeline, X_eval, y_eval):
+    preds = pipeline.predict(X_eval)
+    tn, fp, fn, tp = confusion_matrix(y_eval, preds).ravel()
+    print(f"\n{name}")
+    print(f"  True Negatives  (correctly predicted 'no churn'): {tn}")
+    print(f"  False Positives (predicted churn, actually stayed): {fp}")
+    print(f"  False Negatives (predicted no churn, actually churned): {fn}")
+    print(f"  True Positives  (correctly predicted churn): {tp}")
+
+print_confusion("Honest (max_depth=5, natural imbalance)", clean_pipeline, X_val, y_val)
+print_confusion("Trained on 5% churn rate", imb_pipeline, X_val, y_val)
