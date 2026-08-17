@@ -152,7 +152,7 @@ correct mount target (matches `MODEL_DIR = Path("models")` in `model_service.py`
 against the `Dockerfile`'s `WORKDIR /app`) — then trained a model, rebuilt, and confirmed both
 the `.joblib` file and a live prediction against it survived.
 
-## Stage 2 is complete (21/21). In progress: Stage 3 — ML Failure Lab (13/17 tasks done)
+## Stage 2 is complete (21/21). In progress: Stage 3 — ML Failure Lab (14/17 tasks done)
 
 Deliberately break models and diagnose why — overfitting, underfitting, data leakage, class
 imbalance, precision/recall tradeoffs, threshold tuning, confusion matrices, ROC-AUC, feature
@@ -287,11 +287,20 @@ it to a new `Pipeline`.
     fix. This distinction (calibration failure vs. genuine ranking failure) is invisible to
     accuracy/precision/recall/F1 alone, all of which depend on one committed threshold.
 
-**Next task:** "Measure feature importance" — which columns actually drove the honest
-model's predictions (e.g. `Contract`, `tenure`), useful both as a sanity check (do the
-important features make real-world sense?) and as a way to verify `CancellationRequestFiled`
-would have dominated importance rankings had it stayed in the leaky model — closing the loop
-on the leakage experiment with a different kind of evidence.
+14. Measure feature importance — via `.named_steps["classifier"].feature_importances_` paired
+    with `.named_steps["preprocessor"].get_feature_names_out()` (needed to map the 45 expanded
+    one-hot columns back to real names). Honest model: `Contract_Month-to-month` dominates at
+    51%, `tenure` 17.8%, `InternetService_Fiber optic` 15.3% — top 3 account for ~84%, matches
+    known real-world churn analysis (no-commitment contracts churn most). Leaky model:
+    `CancellationRequestFiled` alone is **92.1%** of total importance — a single feature
+    dominating that heavily is itself an independent red flag, catchable even without
+    checking the train/val gap or suspicious accuracy. Confirms feature importance as a
+    genuinely separate diagnostic tool from the metrics-based checks used earlier.
+
+**Next task:** "Create a distribution-shift experiment" — simulate the real-world scenario
+where the data a model sees in production drifts away from what it was trained on (e.g.
+pricing changes, a new competitor, a demographic shift) and observe how performance degrades
+even though nothing about the model itself changed.
 
 **Security note (joblib):** `joblib.load`/pickle-based formats can execute arbitrary code if
 loading an untrusted file. Fine here since we only ever load artifacts this same project

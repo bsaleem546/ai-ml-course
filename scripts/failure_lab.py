@@ -304,3 +304,26 @@ get_auc("Baseline (majority-class)", baseline, X_val, y_val)
 get_auc("Honest (max_depth=5, natural imbalance)", clean_pipeline, X_val, y_val)
 get_auc("Trained on 5% churn rate", imb_pipeline, X_val, y_val)
 get_auc("Overfit (unbounded depth)", overfit_pipeline, X_val, y_val)
+
+print("\n=== Feature importance (honest model) ===")
+
+feature_names = clean_pipeline.named_steps["preprocessor"].get_feature_names_out()
+importances = clean_pipeline.named_steps["classifier"].feature_importances_
+
+importance_df = pd.DataFrame({
+    "feature": feature_names,
+    "importance": importances,
+}).sort_values("importance", ascending=False)
+
+print(importance_df.head(10).to_string(index=False))
+
+print("\n=== Feature importance (leaky model) — does the leak dominate? ===")
+leaky_feature_names = leaky_pipeline.named_steps["preprocessor"].get_feature_names_out()
+leaky_importances = leaky_pipeline.named_steps["classifier"].feature_importances_
+
+leaky_importance_df = pd.DataFrame({
+    "feature": leaky_feature_names,
+    "importance": leaky_importances,
+}).sort_values("importance", ascending=False)
+
+print(leaky_importance_df.head(10).to_string(index=False))
