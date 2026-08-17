@@ -152,7 +152,7 @@ correct mount target (matches `MODEL_DIR = Path("models")` in `model_service.py`
 against the `Dockerfile`'s `WORKDIR /app`) — then trained a model, rebuilt, and confirmed both
 the `.joblib` file and a live prediction against it survived.
 
-## Stage 2 is complete (21/21). In progress: Stage 3 — ML Failure Lab (12/17 tasks done)
+## Stage 2 is complete (21/21). In progress: Stage 3 — ML Failure Lab (13/17 tasks done)
 
 Deliberately break models and diagnose why — overfitting, underfitting, data leakage, class
 imbalance, precision/recall tradeoffs, threshold tuning, confusion matrices, ROC-AUC, feature
@@ -274,9 +274,24 @@ it to a new `Pipeline`.
     retrain-free way to partially rescue a low-recall model, distinct from fixing the
     training data itself.
 
-**Next task:** "Compare ROC-AUC across models" — a threshold-independent way to compare
-overall ranking quality between models (e.g. the honest model vs. the 5%-imbalance-trained
-one), rather than committing to one fixed threshold like the sweep above.
+13. Compare ROC-AUC across models — baseline 0.5000 (confirms zero ranking ability, as
+    expected), honest 0.8290, 5%-imbalance-trained **0.8003** (surprisingly close to honest
+    despite 0.025 recall!), overfit 0.6526. Key finding: the imbalance-trained model's real
+    problem is *calibration*, not ranking ability — its AUC is nearly as good as the honest
+    model, meaning it still correctly ranks real churners as higher-risk on average, it just
+    learned to output uniformly lower probabilities (too few positive examples during
+    training), so almost nothing crosses the default 0.5 threshold. Directly validates the
+    earlier threshold-tuning task: this specific model is a strong candidate for threshold
+    lowering. The overfit model, by contrast, has genuinely weaker ranking ability (0.65,
+    well below both real models) — a different, deeper failure that threshold tuning can't
+    fix. This distinction (calibration failure vs. genuine ranking failure) is invisible to
+    accuracy/precision/recall/F1 alone, all of which depend on one committed threshold.
+
+**Next task:** "Measure feature importance" — which columns actually drove the honest
+model's predictions (e.g. `Contract`, `tenure`), useful both as a sanity check (do the
+important features make real-world sense?) and as a way to verify `CancellationRequestFiled`
+would have dominated importance rankings had it stayed in the leaky model — closing the loop
+on the leakage experiment with a different kind of evidence.
 
 **Security note (joblib):** `joblib.load`/pickle-based formats can execute arbitrary code if
 loading an untrusted file. Fine here since we only ever load artifacts this same project

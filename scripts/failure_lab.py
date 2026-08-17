@@ -1,7 +1,7 @@
 import pandas as pd
 from sklearn.compose import ColumnTransformer
 from sklearn.impute import SimpleImputer
-from sklearn.metrics import accuracy_score, recall_score,  precision_score, f1_score
+from sklearn.metrics import accuracy_score, recall_score,  precision_score, f1_score, roc_auc_score
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
@@ -290,3 +290,17 @@ for t in thresholds:
 
 threshold_df = pd.DataFrame(threshold_results)
 print(threshold_df.to_string(index=False))
+
+
+print("\n=== ROC-AUC comparison ===")
+
+def get_auc(name, pipeline, X_eval, y_eval):
+    probs = pipeline.predict_proba(X_eval)[:, 1]
+    auc = roc_auc_score(y_eval, probs)
+    print(f"{name}: {auc:.4f}")
+    return auc
+
+get_auc("Baseline (majority-class)", baseline, X_val, y_val)
+get_auc("Honest (max_depth=5, natural imbalance)", clean_pipeline, X_val, y_val)
+get_auc("Trained on 5% churn rate", imb_pipeline, X_val, y_val)
+get_auc("Overfit (unbounded depth)", overfit_pipeline, X_val, y_val)
