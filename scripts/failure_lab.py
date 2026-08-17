@@ -74,3 +74,18 @@ for depth in depths:
 
 complexity_df = pd.DataFrame(complexity_results)
 print(complexity_df.to_string(index=False))
+
+print("\n=== Underfit decision tree (max_depth=1) ===")
+underfit_pipeline = Pipeline(steps=[
+    ("preprocessor", preprocessor),
+    ("classifier", DecisionTreeClassifier(max_depth=1, random_state=42)),
+])
+underfit_pipeline.fit(X_train, y_train)
+
+underfit_train_acc = accuracy_score(y_train, underfit_pipeline.predict(X_train))
+underfit_val_acc = accuracy_score(y_val, underfit_pipeline.predict(X_val))
+
+print(f"Train accuracy: {underfit_train_acc:.4f}")
+print(f"Val accuracy:   {underfit_val_acc:.4f}")
+print(f"Gap:            {underfit_train_acc - underfit_val_acc:.4f}")
+print("Baseline (majority-class) accuracy from Stage 2: 0.7348")

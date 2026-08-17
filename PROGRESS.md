@@ -152,7 +152,7 @@ correct mount target (matches `MODEL_DIR = Path("models")` in `model_service.py`
 against the `Dockerfile`'s `WORKDIR /app`) — then trained a model, rebuilt, and confirmed both
 the `.joblib` file and a live prediction against it survived.
 
-## Stage 2 is complete (21/21). In progress: Stage 3 — ML Failure Lab (3/17 tasks done)
+## Stage 2 is complete (21/21). In progress: Stage 3 — ML Failure Lab (4/17 tasks done)
 
 Deliberately break models and diagnose why — overfitting, underfitting, data leakage, class
 imbalance, precision/recall tradeoffs, threshold tuning, confusion matrices, ROC-AUC, feature
@@ -185,10 +185,17 @@ pipeline, Stage 3 is a series of diagnostic experiments, different purpose).
    tree barely beats guessing the majority class. Confirms Stage 2's `max_depth=5` choice
    (made somewhat arbitrarily at the time) was actually close to optimal for this dataset.
 
-**Next task:** "Create an underfit model" — largely already demonstrated by the `max_depth=1`
-result above (val ≈ baseline accuracy); this task is mostly about calling it out explicitly
-and measuring it the same way, before moving to "Add useful features and measure improvement"
-(the natural fix for underfitting).
+4. Create an underfit model — standalone `DecisionTreeClassifier(max_depth=1)`, isolated from
+   the sweep table as its own labeled result. Train 0.7347, val 0.7345, gap ~0.0002 — near-zero
+   gap but both scores mediocre (barely above the 0.7348 baseline). Clean contrast established
+   with the overfit case: small train/val gap alone doesn't mean "good," it means
+   "consistent" — need both a small gap *and* genuinely good scores (which `max_depth=5`,
+   gap 0.0078 and val 0.7946, actually achieves).
+
+**Next task:** "Add useful features and measure improvement" — the natural fix for
+underfitting: give the `max_depth=1`-style simple model more informative input rather than
+more complexity, and measure whether that closes the gap to the better models without
+overfitting.
 
 **Security note (joblib):** `joblib.load`/pickle-based formats can execute arbitrary code if
 loading an untrusted file. Fine here since we only ever load artifacts this same project
