@@ -1,11 +1,13 @@
 import pandas as pd
 from sklearn.compose import ColumnTransformer
 from sklearn.impute import SimpleImputer
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import accuracy_score, recall_score,  precision_score, f1_score
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from sklearn.tree import DecisionTreeClassifier
+from sklearn.dummy import DummyClassifier
+from sklearn.base import clone
 
 import numpy as np
 
@@ -184,7 +186,7 @@ print(f"(honest max_depth=5 from sweep, no leak — train: 0.8024, val: 0.7946)"
 
 print("\n=== Retest after removing the leaked feature ===")
 clean_pipeline = Pipeline(steps=[
-    ("preprocessor", preprocessor),
+    ("preprocessor", clone(preprocessor)),
     ("classifier", DecisionTreeClassifier(max_depth=5, random_state=42)),
 ])
 clean_pipeline.fit(X_train, y_train)
@@ -195,3 +197,62 @@ clean_val_acc = accuracy_score(y_val, clean_pipeline.predict(X_val))
 print(f"WITHOUT leaked feature — train: {clean_train_acc:.4f}, val: {clean_val_acc:.4f}")
 print(f"WITH leaked feature    — train: {leaky_train_acc:.4f}, val: {leaky_val_acc:.4f}")
 print(f"Val accuracy drop from removing the leak: {leaky_val_acc - clean_val_acc:.4f}")
+
+
+print("\n=== Creating a more extreme imbalance (train only) ===")
+
+churn_idx = y_train[y_train == 1].index
+no_churn_idx = y_train[y_train == 0].index
+
+target_churn_rate = 0.05
+n_no_churn = len(no_churn_idx)
+n_churn_keep = int(target_churn_rate * n_no_churn / (1 - target_churn_rate))
+
+churn_idx_sample = rng.choice(churn_idx, size=n_churn_keep, replace=False)
+imbalanced_idx = list(churn_idx_sample) + list(no_churn_idx)
+
+X_train_imb = X_train.loc[imbalanced_idx]
+y_train_imb = y_train.loc[imbalanced_idx]
+
+print(f"Original train churn rate: {y_train.mean():.2%} ({len(churn_idx)} churned / {len(y_train)} total)")
+print(f"Imbalanced train churn rate: {y_train_imb.mean():.2%} ({n_churn_keep} churned / {len(y_train_imb)} total)")
+
+imb_pipeline = Pipeline(steps=[
+    ("preprocessor", clone(preprocessor)),
+    ("classifier", DecisionTreeClassifier(max_depth=5, random_state=42)),
+])
+imb_pipeline.fit(X_train_imb, y_train_imb)
+
+imb_val_acc = accuracy_score(y_val, imb_pipeline.predict(X_val))
+imb_val_recall = recall_score(y_val, imb_pipeline.predict(X_val))
+
+print(f"\nTrained on 5% churn rate, tested on real {y_val.mean():.2%} val distribution:")
+print(f"Val accuracy: {imb_val_acc:.4f}")
+print(f"Val recall:   {imb_val_recall:.4f}")
+print(f"(honest max_depth=5, trained on natural {y_train.mean():.2%} churn rate — val accuracy 0.7946, val recall 0.6214)")
+
+
+print("\n=== Accuracy vs. Precision vs. Recall vs. F1 ===")
+
+
+
+def evaluate(name, pipeline, X_eval, y_eval):
+    preds = pipeline.predict(X_eval)
+    return {
+        "model": name,
+        "accuracy": accuracy_score(y_eval, preds),
+        "precision": precision_score(y_eval, preds, zero_division=0),
+        "recall": recall_score(y_eval, preds, zero_division=0),
+        "f1": f1_score(y_eval, preds, zero_division=0),
+    }
+    
+baseline = DummyClassifier(strategy="most_frequent")
+baseline.fit(X_train, y_train)
+
+metric_comparison = pd.DataFrame([
+    evaluate("Baseline (majority-class)", baseline, X_val, y_val),
+    evaluate("Honest (max_depth=5, natural imbalance)", clean_pipeline, X_val, y_val),
+    evaluate("Trained on 5% churn rate", imb_pipeline, X_val, y_val),
+])
+
+print(metric_comparison.to_string(index=False))
