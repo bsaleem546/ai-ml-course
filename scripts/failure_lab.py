@@ -181,3 +181,17 @@ leaky_val_acc = accuracy_score(y_val, leaky_pipeline.predict(X_val_leak))
 
 print(f"WITH leaked feature — train: {leaky_train_acc:.4f}, val: {leaky_val_acc:.4f}")
 print(f"(honest max_depth=5 from sweep, no leak — train: 0.8024, val: 0.7946)")
+
+print("\n=== Retest after removing the leaked feature ===")
+clean_pipeline = Pipeline(steps=[
+    ("preprocessor", preprocessor),
+    ("classifier", DecisionTreeClassifier(max_depth=5, random_state=42)),
+])
+clean_pipeline.fit(X_train, y_train)
+
+clean_train_acc = accuracy_score(y_train, clean_pipeline.predict(X_train))
+clean_val_acc = accuracy_score(y_val, clean_pipeline.predict(X_val))
+
+print(f"WITHOUT leaked feature — train: {clean_train_acc:.4f}, val: {clean_val_acc:.4f}")
+print(f"WITH leaked feature    — train: {leaky_train_acc:.4f}, val: {leaky_val_acc:.4f}")
+print(f"Val accuracy drop from removing the leak: {leaky_val_acc - clean_val_acc:.4f}")

@@ -152,7 +152,7 @@ correct mount target (matches `MODEL_DIR = Path("models")` in `model_service.py`
 against the `Dockerfile`'s `WORKDIR /app`) — then trained a model, rebuilt, and confirmed both
 the `.joblib` file and a live prediction against it survived.
 
-## Stage 2 is complete (21/21). In progress: Stage 3 — ML Failure Lab (7/17 tasks done)
+## Stage 2 is complete (21/21). In progress: Stage 3 — ML Failure Lab (8/17 tasks done)
 
 Deliberately break models and diagnose why — overfitting, underfitting, data leakage, class
 imbalance, precision/recall tradeoffs, threshold tuning, confusion matrices, ROC-AUC, feature
@@ -218,9 +218,17 @@ pipeline, Stage 3 is a series of diagnostic experiments, different purpose).
    both splits) — the only real defense is asking "would this feature genuinely be available
    before the prediction is needed, in production?", not a metric-based check.
 
-**Next task:** "Remove the leaked feature and retest" — drop `CancellationRequestFiled` and
-confirm performance falls back to the honest ~0.79 val accuracy, closing the leakage
-experiment loop.
+8. Remove the leaked feature and retest — retrained the same `max_depth=5` tree without
+   `CancellationRequestFiled`. Val accuracy: **0.7946**, matching the original honest baseline
+   exactly, confirming the entire 16-point jump (0.7946 → 0.9560) was caused solely by that
+   one column. Closes the leakage experiment loop: introduce → observe suspicious jump →
+   remove → confirm it was the cause — the actual workflow for debugging real leakage bugs.
+
+**Next task:** "Create an imbalanced classification dataset" — the churn dataset (~26.5%
+churn rate) is already naturally imbalanced, so this task is likely about deliberately
+constructing a *more* extreme imbalance (e.g. subsampling to 5-10% minority class) to see how
+metrics behave as imbalance gets more severe, building on the class-imbalance issues already
+surfaced organically in Stage 2 (random forest's recall collapse, etc.).
 
 **Security note (joblib):** `joblib.load`/pickle-based formats can execute arbitrary code if
 loading an untrusted file. Fine here since we only ever load artifacts this same project
