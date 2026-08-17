@@ -152,7 +152,7 @@ correct mount target (matches `MODEL_DIR = Path("models")` in `model_service.py`
 against the `Dockerfile`'s `WORKDIR /app`) — then trained a model, rebuilt, and confirmed both
 the `.joblib` file and a live prediction against it survived.
 
-## Stage 2 is complete (21/21). In progress: Stage 3 — ML Failure Lab (2/17 tasks done)
+## Stage 2 is complete (21/21). In progress: Stage 3 — ML Failure Lab (3/17 tasks done)
 
 Deliberately break models and diagnose why — overfitting, underfitting, data leakage, class
 imbalance, precision/recall tradeoffs, threshold tuning, confusion matrices, ROC-AUC, feature
@@ -176,9 +176,19 @@ pipeline, Stage 3 is a series of diagnostic experiments, different purpose).
    than doing nothing on new data. Stage 2's properly-capped tree (`max_depth=5`) scored
    0.7926 val accuracy for comparison — less "training performance," better real performance.
 
-**Next task:** "Reduce model complexity and compare results" — sweep `max_depth` across
-several values (e.g. 2, 5, 10, 20, unbounded) and observe how the train/val gap changes with
-complexity, turning the single overfit example into a demonstrated relationship.
+3. Reduce model complexity and compare results — swept `max_depth` across
+   `[1, 2, 3, 5, 10, 20, None]`. Clean bias-variance curve: val accuracy climbs with train
+   accuracy through depth 5 (**peak val accuracy 0.7946 at depth 5**, gap stays under 1%),
+   then train keeps climbing while val *drops* past depth 5 — depth 10 gap jumps to 11%,
+   depth 20/unbounded gap ~27% (matches the standalone overfit experiment). `max_depth=1`
+   (0.7347 val accuracy) is nearly identical to the Stage 2 baseline (0.7348) — a 1-question
+   tree barely beats guessing the majority class. Confirms Stage 2's `max_depth=5` choice
+   (made somewhat arbitrarily at the time) was actually close to optimal for this dataset.
+
+**Next task:** "Create an underfit model" — largely already demonstrated by the `max_depth=1`
+result above (val ≈ baseline accuracy); this task is mostly about calling it out explicitly
+and measuring it the same way, before moving to "Add useful features and measure improvement"
+(the natural fix for underfitting).
 
 **Security note (joblib):** `joblib.load`/pickle-based formats can execute arbitrary code if
 loading an untrusted file. Fine here since we only ever load artifacts this same project
