@@ -88,3 +88,30 @@ async def train_churn_model(db: AsyncSession, dataset_id: int) -> TrainedModel:
     )
     logger.info("model trained id=%s dataset_id=%s accuracy=%.4f", model.id, dataset.id, model.accuracy)
     return model
+
+
+class InvalidPredictionInputError(Exception):
+    pass
+
+
+def predict_churn(model: TrainedModel, features: dict) -> tuple[str, float]:
+    pipeline = joblib.load(model.artifact_path)
+    expected_columns = list(pipeline.feature_names_in_)
+
+    missing = set(expected_columns) - set(features.keys())
+    if missing:
+        raise InvalidPredictionInputError(f"Missing required fields: {sorted(missing)}")
+
+    unexpected = set(features.keys()) - set(expected_columns)
+    if unexpected:
+        raise InvalidPredictionInputError(f"Unknown fields: {sorted(unexpected)}")
+
+    row = pd.DataFrame([{col: features[col] for col in expected_columns}])
+
+    try:
+        prediction = pipeline.predict(row)[0]
+        probability = pipeline.predict_proba(row)[0][1]
+    except (ValueError, TypeError) as e:
+        raise InvalidPredictionInputError(f"Could not run prediction on given input: {e}")
+
+    return ("Yes" if prediction == 1 else "No"), float(probability)

@@ -17,7 +17,7 @@ from app.schemas.dataset import IngestionJobResponse
 from app.services import job_service
 
 from app.models.trained_model import TrainedModel
-from app.schemas.model import ModelMetrics, ModelResponse, ModelTrainRequest
+from app.schemas.model import ModelMetrics, ModelResponse, ModelTrainRequest, PredictRequest, PredictResponse
 from app.services import model_service
 
 router = APIRouter()
@@ -101,3 +101,10 @@ async def get_model(model_id: int, db: AsyncSession = Depends(get_db)) -> Traine
 @router.get("/models/{model_id}/metrics", response_model=ModelMetrics)
 async def get_model_metrics(model_id: int, db: AsyncSession = Depends(get_db)) -> TrainedModel:
     return await model_service.get_model(db, model_id)
+
+
+@router.post("/models/{model_id}/predict", response_model=PredictResponse)
+async def predict(model_id: int, payload: PredictRequest, db: AsyncSession = Depends(get_db)) -> PredictResponse:
+    model = await model_service.get_model(db, model_id)
+    prediction, probability = model_service.predict_churn(model, payload.features)
+    return PredictResponse(churn_prediction=prediction, churn_probability=probability)

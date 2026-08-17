@@ -33,7 +33,7 @@ which does **not** travel with the repo — this file is the portable source of 
   so far), job states (queued/running/completed/failed), error persistence, idempotency,
   tests. All 16/16 tasks. Full build log in `README.md` under "Stage 1."
 
-### Stage 2: in progress (19/21 tasks done)
+### Stage 2: complete (21/21 tasks)
 
 **Done:**
 1. Choose a real tabular dataset — [Telco Customer Churn](https://raw.githubusercontent.com/IBM/telco-customer-churn-on-icp4d/master/data/Telco-Customer-Churn.csv)
@@ -131,13 +131,33 @@ now exists in two places — `scripts/train_churn_model.py` (exploration, 4 mode
 in sync by hand. Not fixed yet; worth a "share this via a common module" pass eventually but
 not blocking the remaining tasks.
 
-**Next task:** `POST /models/{id}/predict` and "Add inference validation and error handling" —
-the last 2 of Stage 2's 21 tasks. Predict needs to: load the persisted `.joblib` pipeline for
-the given model id, accept a single customer's feature values as a request body, validate
-them (right fields present, right types, handle unknown categorical values gracefully —
-`OneHotEncoder(handle_unknown="ignore")` already helps here), run `.predict()`/`.predict_proba()`,
-and return a clean prediction + probability, with sensible error responses (404 if model
-doesn't exist, 400/422 if the input is malformed) rather than a raw 500 on bad input.
+20. `POST /api/v1/models/{id}/predict` — `model_service.predict_churn(model, features)` loads
+   the model's `.joblib` pipeline, derives `expected_columns` from `pipeline.feature_names_in_`
+   (not hardcoded — works for any model's actual feature set), rejects both missing *and*
+   unexpected feature keys via `InvalidPredictionInputError` → `400`, builds a single-row
+   DataFrame, and returns `(prediction_label, churn_probability)` from `predict`/`predict_proba`.
+21. Inference validation and error handling — `InvalidPredictionInputError` registered in
+   `main.py` (400), reusing `ModelNotFoundError` (404) for unknown model ids. Verified all 3
+   paths against a freshly trained model: happy path (realistic at-risk customer — new,
+   month-to-month, fiber, no add-ons, high charges — correctly predicted `"Yes"` at 77%
+   probability), missing-field rejection (`400`), unknown model id (`404`).
+
+**Gotcha hit and confirmed live:** `models/` is not a mounted Docker volume (unlike
+`uploads_data`/`postgres_data` in `docker-compose.yml`), so a container rebuild wipes trained
+model artifacts while their DB rows survive (Postgres persists) — predicting against an
+orphaned model id correctly falls through to the global handler as a clean `500`, but this is
+a real gap worth fixing (add a `models_data` volume, same pattern as `uploads_data`) before
+relying on this for anything long-lived. Not fixed yet — flagged for later, not blocking.
+
+## Stage 2 is complete. Next: Stage 3 — ML Failure Lab
+
+Deliberately break models and diagnose why — overfitting, underfitting, data leakage, class
+imbalance, precision/recall tradeoffs, threshold tuning, confusion matrices, ROC-AUC, feature
+importance, distribution shift. Stage 2 already surfaced most of the raw material this stage
+will dig into: class imbalance (~26.5% churn rate) that every model struggled with, the
+random forest's majority-vote bias hurting minority-class recall, and the cross-validation
+finding that a single train/val split ranking (decision tree "winning" on recall) was
+partly luck/unstable compared to the CV mean.
 
 **Security note (joblib):** `joblib.load`/pickle-based formats can execute arbitrary code if
 loading an untrusted file. Fine here since we only ever load artifacts this same project

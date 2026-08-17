@@ -20,3 +20,11 @@ class ModelMetrics(BaseModel):
     precision: float
     recall: float
     f1: float
+
+class PredictRequest(BaseModel):
+    features: dict[str, str | int | float | None]
+
+
+class PredictResponse(BaseModel):
+    churn_prediction: str
+    churn_probability: float
