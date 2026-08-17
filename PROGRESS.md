@@ -152,7 +152,7 @@ correct mount target (matches `MODEL_DIR = Path("models")` in `model_service.py`
 against the `Dockerfile`'s `WORKDIR /app`) — then trained a model, rebuilt, and confirmed both
 the `.joblib` file and a live prediction against it survived.
 
-## Stage 2 is complete (21/21). In progress: Stage 3 — ML Failure Lab (16/17 tasks done)
+## Stage 2 is complete (21/21). Stage 3 is complete (17/17).
 
 Deliberately break models and diagnose why — overfitting, underfitting, data leakage, class
 imbalance, precision/recall tradeoffs, threshold tuning, confusion matrices, ROC-AUC, feature
@@ -316,10 +316,19 @@ it to a new `Pipeline`.
     underfitting, leakage, imbalance, threshold sensitivity, ranking-vs-calibration
     (ROC-AUC), distribution shift.
 
-**Next task (last one in Stage 3):** "Add automated tests for critical preprocessing
-behavior" — regression tests so the bugs already found in this stage can't silently
-reappear: the `TotalCharges` blank-string-to-NaN cleanup, and the `clone()`-per-pipeline
-pattern (the shared-preprocessor mutation bug found and fixed earlier in this stage).
+17. Add automated tests for critical preprocessing behavior — `tests/unit/test_preprocessing.py`,
+    two regression tests targeting the two real bugs found earlier in this stage:
+    `test_total_charges_blank_string_becomes_nan` (locks in the `pd.to_numeric(errors="coerce")`
+    fix) and `test_cloned_preprocessor_does_not_leak_state_between_pipelines` (locks in the
+    `clone()` fix for the shared-preprocessor mutation bug). Both pass; full suite (17 tests
+    total across unit + integration) confirmed green.
+
+## Stage 3 is complete (17/17). Next: Stage 4 — Deep Learning with PyTorch
+
+Replace one classical model with a neural network built from a custom PyTorch training loop
+(not a high-level abstraction) — tensors, Datasets/DataLoaders, a feed-forward network, loss
+functions, backprop, optimizers, checkpointing, GPU/CPU handling, and exposing training as a
+background job in the platform (tying back to Stage 1's job-queue system).
 
 **Security note (joblib):** `joblib.load`/pickle-based formats can execute arbitrary code if
 loading an untrusted file. Fine here since we only ever load artifacts this same project
