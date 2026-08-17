@@ -327,3 +327,19 @@ leaky_importance_df = pd.DataFrame({
 }).sort_values("importance", ascending=False)
 
 print(leaky_importance_df.head(10).to_string(index=False))
+
+print("\n=== Distribution shift experiment (simulated 20% price increase) ===")
+
+X_val_shifted = X_val.copy()
+X_val_shifted["MonthlyCharges"] = X_val_shifted["MonthlyCharges"] * 1.20
+X_val_shifted["TotalCharges"] = X_val_shifted["TotalCharges"] * 1.20
+
+shifted_preds = clean_pipeline.predict(X_val_shifted)
+
+shifted_accuracy = accuracy_score(y_val, shifted_preds)
+shifted_precision = precision_score(y_val, shifted_preds, zero_division=0)
+shifted_recall = recall_score(y_val, shifted_preds, zero_division=0)
+shifted_f1 = f1_score(y_val, shifted_preds, zero_division=0)
+
+print(f"On shifted data  — accuracy: {shifted_accuracy:.4f}, precision: {shifted_precision:.4f}, recall: {shifted_recall:.4f}, f1: {shifted_f1:.4f}")
+print(f"On original data — accuracy: {clean_val_acc:.4f}, precision: 0.6152, recall: 0.6043, f1: 0.6097")

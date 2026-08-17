@@ -152,7 +152,7 @@ correct mount target (matches `MODEL_DIR = Path("models")` in `model_service.py`
 against the `Dockerfile`'s `WORKDIR /app`) — then trained a model, rebuilt, and confirmed both
 the `.joblib` file and a live prediction against it survived.
 
-## Stage 2 is complete (21/21). In progress: Stage 3 — ML Failure Lab (14/17 tasks done)
+## Stage 2 is complete (21/21). In progress: Stage 3 — ML Failure Lab (16/17 tasks done)
 
 Deliberately break models and diagnose why — overfitting, underfitting, data leakage, class
 imbalance, precision/recall tradeoffs, threshold tuning, confusion matrices, ROC-AUC, feature
@@ -297,10 +297,29 @@ it to a new `Pipeline`.
     checking the train/val gap or suspicious accuracy. Confirms feature importance as a
     genuinely separate diagnostic tool from the metrics-based checks used earlier.
 
-**Next task:** "Create a distribution-shift experiment" — simulate the real-world scenario
-where the data a model sees in production drifts away from what it was trained on (e.g.
-pricing changes, a new competitor, a demographic shift) and observe how performance degrades
-even though nothing about the model itself changed.
+15. Create a distribution-shift experiment — simulated a 20% price increase (`MonthlyCharges`/
+    `TotalCharges` scaled up on `X_val`, `y_val` left unchanged — deliberately isolating "does
+    the model's behavior degrade under input drift" from "how would customers actually react
+    to a real price hike"). Result: accuracy 0.7946→0.7743, **precision 0.6152→0.5709** (the
+    biggest drop), recall nearly flat (0.6043→0.6025), F1 0.6097→0.5863. Explanation: inflated
+    charge values pushed more customers across the tree's learned risk thresholds, so it
+    flagged churn more often overall — catching about the same real churners (flat recall)
+    but with more false alarms (precision drop). Identified as the most dangerous failure mode
+    covered in this stage: unlike overfitting (visible train/val gap) or leakage (suspiciously
+    perfect numbers), distribution shift produces quiet, gradual decay with no obvious single-
+    snapshot red flag — only catchable by monitoring performance over time against a stable
+    baseline, which is why production ML systems need drift detection, not just train-once.
+
+16. Document each failure and its root cause — **`docs/failure_lab_findings.md`**, one
+    section per failure mode (symptom/root cause/detection/fix, grounded in the actual
+    numbers produced), plus a cross-cutting lessons section. Covers all 7: overfitting,
+    underfitting, leakage, imbalance, threshold sensitivity, ranking-vs-calibration
+    (ROC-AUC), distribution shift.
+
+**Next task (last one in Stage 3):** "Add automated tests for critical preprocessing
+behavior" — regression tests so the bugs already found in this stage can't silently
+reappear: the `TotalCharges` blank-string-to-NaN cleanup, and the `clone()`-per-pipeline
+pattern (the shared-preprocessor mutation bug found and fixed earlier in this stage).
 
 **Security note (joblib):** `joblib.load`/pickle-based formats can execute arbitrary code if
 loading an untrusted file. Fine here since we only ever load artifacts this same project
