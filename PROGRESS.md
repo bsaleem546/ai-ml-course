@@ -33,7 +33,7 @@ which does **not** travel with the repo — this file is the portable source of 
   so far), job states (queued/running/completed/failed), error persistence, idempotency,
   tests. All 16/16 tasks. Full build log in `README.md` under "Stage 1."
 
-### Stage 2: in progress (16/21 tasks done)
+### Stage 2: in progress (19/21 tasks done)
 
 **Done:**
 1. Choose a real tabular dataset — [Telco Customer Churn](https://raw.githubusercontent.com/IBM/telco-customer-churn-on-icp4d/master/data/Telco-Customer-Churn.csv)
@@ -108,12 +108,36 @@ Fixed with `pd.to_numeric(df["TotalCharges"], errors="coerce")` before anything 
    casts on the `results` entries — only `cv_recall_mean`/`cv_recall_std` were explicitly cast
    (defensive, in case that ever changes with a different sklearn version/build).
 
-**Next task:** the remaining Stage 2 API tasks — `POST /models/train`, `GET /models/{id}`,
-`GET /models/{id}/metrics`, `POST /models/{id}/predict`, and inference validation/error
-handling. This is the shift from "standalone script" to "wired into the FastAPI app" — will
-need a `Model`/`TrainedModel` DB table (similar to `Dataset`/`IngestionJob`) to track trained
-models, likely backed by the same `models/*.joblib` + `*.metadata.json` file convention
-established in this script.
+17. `POST /api/v1/models/train` — `app/services/model_service.py`'s `train_churn_model(db, dataset_id)`.
+   Re-reads the dataset's CSV via `dataset.storage_path`, re-implements the same
+   preprocessing pipeline as the script (numeric impute+scale, categorical impute+one-hot),
+   trains a single hardcoded `LogisticRegression` (not all 4 models — a deliberate
+   simplification for the API path vs. the script's exploration), saves the artifact to
+   `models/<uuid>_churn_logreg.joblib`, and creates a `TrainedModel` DB row (new table,
+   migration `74975db85037`) with `accuracy`/`precision`/`recall`/`f1` stored as real columns
+   (not JSON) — a genuine model registry now, not just a metadata JSON file. Verified:
+   `POST {"dataset_id": 14}` against the real uploaded telco-churn dataset →
+   `201`, model `id=1`, accuracy 0.8056 (close to the script's 0.8059; small difference is an
+   80/20 split here vs. 70/15/15 in the script).
+18. `GET /api/v1/models/{id}` — returns `ModelResponse` (id/name/model_type/dataset_id/created_at). Verified working.
+19. `GET /api/v1/models/{id}/metrics` — returns `ModelMetrics` (accuracy/precision/recall/f1) by
+   reusing `model_service.get_model` and letting FastAPI's `response_model` pick the matching
+   fields off the `TrainedModel` ORM object. `ModelNotFoundError` → `404` verified on both
+   endpoints (registered in `main.py`, same pattern as `DatasetNotFoundError`/`JobNotFoundError`).
+
+**Known duplication worth being aware of, not yet reconciled:** the preprocessing pipeline
+now exists in two places — `scripts/train_churn_model.py` (exploration, 4 models, CV) and
+`app/services/model_service.py` (API path, LogisticRegression only). They're currently kept
+in sync by hand. Not fixed yet; worth a "share this via a common module" pass eventually but
+not blocking the remaining tasks.
+
+**Next task:** `POST /models/{id}/predict` and "Add inference validation and error handling" —
+the last 2 of Stage 2's 21 tasks. Predict needs to: load the persisted `.joblib` pipeline for
+the given model id, accept a single customer's feature values as a request body, validate
+them (right fields present, right types, handle unknown categorical values gracefully —
+`OneHotEncoder(handle_unknown="ignore")` already helps here), run `.predict()`/`.predict_proba()`,
+and return a clean prediction + probability, with sensible error responses (404 if model
+doesn't exist, 400/422 if the input is malformed) rather than a raw 500 on bad input.
 
 **Security note (joblib):** `joblib.load`/pickle-based formats can execute arbitrary code if
 loading an untrusted file. Fine here since we only ever load artifacts this same project

@@ -4,6 +4,19 @@ AI/ML Engineer build-first roadmap project.
 
 This README is written as a step-by-step build log, in the order things were actually set up. If you need to rebuild this project from scratch, follow it top to bottom.
 
+## Picking the project back up (after `git pull` or time away)
+
+Run these two every time, regardless of what changed:
+
+```bash
+uv sync --system-certs
+uv run alembic upgrade head
+```
+
+Equivalent to `npm install` + `php artisan migrate` if that's a more familiar mental model — sync installs/updates dependencies from `pyproject.toml`/`uv.lock`, then Alembic applies any pending database migrations. Both are safe to run even when nothing changed (`uv sync` reports nothing to do, Alembic prints nothing if already at head). Note `uv run <anything>` auto-syncs dependencies first, so this often happens implicitly too — running it explicitly is just the deliberate version.
+
+If picking this up on a different machine than last time: also run `docker compose up --build -d` + `docker compose exec api uv run alembic upgrade head` (Docker's local Postgres is separate from the hosted Neon one, needs migrations applied independently), and re-download any datasets under `data/` (gitignored, doesn't transfer via git — see `PROGRESS.md` for sources).
+
 ## Stage 0 — Production Python Foundation
 
 ### 1. Install uv
