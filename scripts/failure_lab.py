@@ -89,3 +89,53 @@ print(f"Train accuracy: {underfit_train_acc:.4f}")
 print(f"Val accuracy:   {underfit_val_acc:.4f}")
 print(f"Gap:            {underfit_train_acc - underfit_val_acc:.4f}")
 print("Baseline (majority-class) accuracy from Stage 2: 0.7348")
+
+print("\n=== Feature engineering: does it fix underfitting? ===")
+
+service_cols = ["OnlineSecurity", "OnlineBackup", "DeviceProtection", "TechSupport", "StreamingTV", "StreamingMovies"]
+
+X_train_fe = X_train.copy()
+X_val_fe = X_val.copy()
+
+for data in (X_train_fe, X_val_fe):
+    data["NumServices"] = (data[service_cols] == "Yes").sum(axis=1)
+    data["AvgMonthlyCharge"] = data["TotalCharges"] / data["tenure"].replace(0, 1)
+
+numeric_features_fe = numeric_features + ["NumServices", "AvgMonthlyCharge"]
+preprocessor_fe = ColumnTransformer(transformers=[
+    ("numeric", Pipeline([
+        ("imputer", SimpleImputer(strategy="median")),
+        ("scaler", StandardScaler()),
+    ]), numeric_features_fe),
+    ("categorical", Pipeline([
+        ("imputer", SimpleImputer(strategy="most_frequent")),
+        ("encoder", OneHotEncoder(handle_unknown="ignore")),
+    ]), categorical_features),
+])
+
+fe_pipeline = Pipeline(steps=[
+    ("preprocessor", preprocessor_fe),
+    ("classifier", DecisionTreeClassifier(max_depth=1, random_state=42)),
+])
+fe_pipeline.fit(X_train_fe, y_train)
+
+fe_train_acc = accuracy_score(y_train, fe_pipeline.predict(X_train_fe))
+fe_val_acc = accuracy_score(y_val, fe_pipeline.predict(X_val_fe))
+
+print(f"Train accuracy: {fe_train_acc:.4f}")
+print(f"Val accuracy:   {fe_val_acc:.4f}")
+print(f"(vs. underfit baseline: train 0.7347, val 0.7345)")
+
+print("\n=== Feature engineering at max_depth=3 (enough capacity to use it) ===")
+fe_pipeline_d3 = Pipeline(steps=[
+    ("preprocessor", preprocessor_fe),
+    ("classifier", DecisionTreeClassifier(max_depth=3, random_state=42)),
+])
+fe_pipeline_d3.fit(X_train_fe, y_train)
+
+fe_d3_train_acc = accuracy_score(y_train, fe_pipeline_d3.predict(X_train_fe))
+fe_d3_val_acc = accuracy_score(y_val, fe_pipeline_d3.predict(X_val_fe))
+
+print(f"Train accuracy: {fe_d3_train_acc:.4f}")
+print(f"Val accuracy:   {fe_d3_val_acc:.4f}")
+print(f"(vs. non-engineered max_depth=3 from sweep: train 0.7915, val 0.7875)")

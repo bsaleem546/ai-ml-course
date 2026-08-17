@@ -152,7 +152,7 @@ correct mount target (matches `MODEL_DIR = Path("models")` in `model_service.py`
 against the `Dockerfile`'s `WORKDIR /app`) — then trained a model, rebuilt, and confirmed both
 the `.joblib` file and a live prediction against it survived.
 
-## Stage 2 is complete (21/21). In progress: Stage 3 — ML Failure Lab (4/17 tasks done)
+## Stage 2 is complete (21/21). In progress: Stage 3 — ML Failure Lab (5/17 tasks done)
 
 Deliberately break models and diagnose why — overfitting, underfitting, data leakage, class
 imbalance, precision/recall tradeoffs, threshold tuning, confusion matrices, ROC-AUC, feature
@@ -192,10 +192,23 @@ pipeline, Stage 3 is a series of diagnostic experiments, different purpose).
    "consistent" — need both a small gap *and* genuinely good scores (which `max_depth=5`,
    gap 0.0078 and val 0.7946, actually achieves).
 
-**Next task:** "Add useful features and measure improvement" — the natural fix for
-underfitting: give the `max_depth=1`-style simple model more informative input rather than
-more complexity, and measure whether that closes the gap to the better models without
-overfitting.
+5. Add useful features and measure improvement — engineered `NumServices` (count of 6
+   service add-on columns with `"Yes"`) and `AvgMonthlyCharge` (`TotalCharges / tenure`,
+   zero-safe). Tested at both `max_depth=1` and `max_depth=3`, against the original (non-
+   engineered) columns at the same depths. Result: **identical accuracy in both cases** (down
+   to 4 decimal places) — the engineered features added zero measurable signal. Real,
+   evidence-based explanation, not a bug: both features are just repackaged versions of
+   columns the tree already had direct access to (`NumServices` summarizes 6 columns the tree
+   can already split on individually; `AvgMonthlyCharge` is a ratio of two already-present
+   columns) — decision trees can implicitly combine existing features across splits, so
+   pre-combining them for it added nothing. Noted as a case where feature engineering likely
+   matters more for models that *can't* naturally combine features (e.g. logistic regression)
+   than for trees — not verified yet, a good candidate for a future experiment.
+
+**Next task:** "Introduce target leakage intentionally" — deliberately add a feature that
+"leaks" information from the target/future into the training data (a classic real-world bug),
+observe the unrealistically good validation performance it produces, then remove it and
+confirm performance drops back to honest levels.
 
 **Security note (joblib):** `joblib.load`/pickle-based formats can execute arbitrary code if
 loading an untrusted file. Fine here since we only ever load artifacts this same project
