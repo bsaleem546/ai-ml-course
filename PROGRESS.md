@@ -142,12 +142,15 @@ not blocking the remaining tasks.
    month-to-month, fiber, no add-ons, high charges — correctly predicted `"Yes"` at 77%
    probability), missing-field rejection (`400`), unknown model id (`404`).
 
-**Gotcha hit and confirmed live:** `models/` is not a mounted Docker volume (unlike
-`uploads_data`/`postgres_data` in `docker-compose.yml`), so a container rebuild wipes trained
-model artifacts while their DB rows survive (Postgres persists) — predicting against an
-orphaned model id correctly falls through to the global handler as a clean `500`, but this is
-a real gap worth fixing (add a `models_data` volume, same pattern as `uploads_data`) before
-relying on this for anything long-lived. Not fixed yet — flagged for later, not blocking.
+**Gotcha hit and fixed:** `models/` wasn't a mounted Docker volume (unlike `uploads_data`/
+`postgres_data` in `docker-compose.yml`), so a container rebuild wiped trained model artifacts
+while their DB rows survived (Postgres persists) — predicting against an orphaned model id
+fell through to the global handler as a clean `500` (confirmed live). Fixed by adding
+`models_data:/app/models` to the `api` service, same pattern as `uploads_data`. Verified: `pwd`
+inside the container and `Path("models").resolve()` both confirmed `/app/models` is the
+correct mount target (matches `MODEL_DIR = Path("models")` in `model_service.py` resolved
+against the `Dockerfile`'s `WORKDIR /app`) — then trained a model, rebuilt, and confirmed both
+the `.joblib` file and a live prediction against it survived.
 
 ## Stage 2 is complete. Next: Stage 3 — ML Failure Lab
 

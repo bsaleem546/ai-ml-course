@@ -473,6 +473,8 @@ Validation (`app/services/dataset_service.py`, `create_dataset_from_csv`): rejec
 
 > **Uploads persist in a named volume when run via Docker Compose** — `docker-compose.yml`'s `api` service mounts `uploads_data:/app/uploads`, same pattern as `postgres_data`, so files survive `docker compose up --build`. They're only lost on `docker compose down -v` (which explicitly wipes volumes) or if run outside Docker without a persistent `uploads/` directory. To inspect an uploaded file inside the container: `docker compose exec api ls -la uploads/`.
 
+> **Trained model artifacts persist the same way** — `models_data:/app/models`, same pattern as `uploads_data`/`postgres_data`. Without this, a rebuild wipes `models/*.joblib` (the container's writable filesystem is disposable) while the `trained_models` Postgres rows survive — leaving orphaned model records that 500 on `/predict` (`FileNotFoundError` on `joblib.load`, uncaught, falls through to the global exception handler) instead of the DB and the artifact staying in sync. Verified by training a model, rebuilding, and confirming both the file and a subsequent prediction still work. `/app/models` matches `MODEL_DIR = Path("models")` in `app/services/model_service.py`, resolved against the container's `WORKDIR /app` from the `Dockerfile` — confirmed directly with `docker compose exec api pwd` and `Path("models").resolve()`, not just assumed from reading the code.
+
 ### Sample CSV datasets for testing
 
 - [Datablist sample CSV files](https://www.datablist.com/learn/csv/download-sample-csv-files) — 100 to 2,000,000 records
