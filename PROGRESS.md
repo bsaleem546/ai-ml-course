@@ -323,7 +323,7 @@ it to a new `Pipeline`.
     `clone()` fix for the shared-preprocessor mutation bug). Both pass; full suite (17 tests
     total across unit + integration) confirmed green.
 
-## Stage 3 is complete (17/17). In progress: Stage 4 — Deep Learning with PyTorch (8/20 tasks done)
+## Stage 3 is complete (17/17). In progress: Stage 4 — Deep Learning with PyTorch (11/20 tasks done)
 
 Replace one classical model with a neural network built from a custom PyTorch training loop
 (not a high-level abstraction) — tensors, Datasets/DataLoaders, a feed-forward network, loss
@@ -366,9 +366,23 @@ batches, consistent with ~5,634 train rows and ~1,409 val rows at batch size 32.
    directly relevant given Stage 3's imbalance findings, not applied yet since it's not this
    specific task's scope, but a concrete lever if the network's churn recall turns out weak.
 
-**Next task:** "Write the training loop yourself" + "Write the validation loop" — the actual
-5-step learning cycle (batch → forward pass → compute loss → backward pass → optimizer step)
-run explicitly, epoch by epoch, plus a separate no-gradient evaluation pass on `val_loader`.
+9. Write the training loop yourself + 10. Write the validation loop + 11. Track training and
+   validation loss — `train_one_epoch()` (the 5-step cycle: `zero_grad` → forward → loss →
+   `backward` → `optimizer.step`, weighted running average via `loss.item() * batch_size`)
+   and `evaluate()` (same forward/loss, but `model.eval()` + `torch.no_grad()`, no
+   backward/step — validation only measures, never learns). Ran 20 epochs. Result: train_loss
+   fell smoothly and monotonically the whole way (0.4864 → 0.4005); val_loss dropped quickly
+   through ~epoch 8, then plateaued and started drifting back up — **lowest val_loss was
+   epoch 16 (0.4158)**, epoch 20 was already higher (0.4211) despite train_loss still falling.
+   This is the overfitting signature from Stage 3 (train improving, val stalling/regressing)
+   showing up organically in a real run, not a deliberately broken example — direct, concrete
+   setup for the early-stopping and checkpointing tasks next.
+
+**Next task:** "Experiment with batch size" + "Experiment with learning rate" — deliberately
+varying `BATCH_SIZE` (currently 32) and `lr` (currently 0.001) to see their effect on training
+dynamics, before "Add early stopping" (stop around the epoch where val_loss actually bottoms
+out — epoch 16 in the run above, not epoch 20) and "Save checkpoints" (persist the best-val-loss
+weights, not necessarily the final epoch's).
 
 **Security note (joblib):** `joblib.load`/pickle-based formats can execute arbitrary code if
 loading an untrusted file. Fine here since we only ever load artifacts this same project
