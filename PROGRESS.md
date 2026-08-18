@@ -323,7 +323,7 @@ it to a new `Pipeline`.
     `clone()` fix for the shared-preprocessor mutation bug). Both pass; full suite (17 tests
     total across unit + integration) confirmed green.
 
-## Stage 3 is complete (17/17). In progress: Stage 4 — Deep Learning with PyTorch (15/20 tasks done)
+## Stage 3 is complete (17/17). In progress: Stage 4 — Deep Learning with PyTorch (17/20 tasks done)
 
 Replace one classical model with a neural network built from a custom PyTorch training loop
 (not a high-level abstraction) — tensors, Datasets/DataLoaders, a feed-forward network, loss
@@ -438,13 +438,31 @@ batches, consistent with ~5,634 train rows and ~1,409 val rows at batch size 32.
     `RuntimeError: Parent directory models does not exist` (the gitignored `models/` folder
     wasn't present on this machine). Fixed by creating the directory (`mkdir -p models`).
 
-**Next task:** 16. Load checkpoints for inference — `model.load_state_dict(torch.load(...))`
-already added right before the final `evaluate_metrics` call, reloading the best checkpointed
-weights (not whatever epoch the loop happened to stop on) before reporting final metrics.
-Written but not yet verified with a fresh run/output — confirm the printed final metrics
-change from the pre-reload numbers above, then this is done. After that: 17 (detect
-CUDA/move to GPU — defensive code only, this machine is CPU-only), 18 (expose training as a
-background job, reusing Stage 1's job-queue system), 19 (tests for model loading/inference).
+16. Load checkpoints for inference — `model.load_state_dict(torch.load("models/churn_nn_best.pt"))`
+    right before the final `evaluate_metrics` call, reloading the best-checkpointed (epoch 4)
+    weights instead of whatever epoch training happened to stop on (epoch 7). Verified: with
+    the seed fixed, the training curve and early-stopping point were identical between runs,
+    but the final metrics genuinely changed (accuracy 0.8020→0.7984, precision 0.6508→0.6398,
+    recall 0.5481→0.5508, f1 0.5951→0.5920) — confirming the reload swaps in a different
+    (earlier, better-by-val_loss) set of weights rather than just re-printing the same model.
+
+17. Detect CUDA / move to GPU — `device = torch.device("cuda" if torch.cuda.is_available() else "cpu")`
+    near the top, `model.to(device)` (and `trial_model.to(device)` in `run_experiment`) right
+    after model creation, and `X_batch, y_batch = X_batch.to(device), y_batch.to(device)` added
+    as the first line inside all three batch loops (`train_one_epoch`, `evaluate`,
+    `evaluate_metrics`) — needed because the `DataLoader` always yields CPU tensors regardless
+    of where the model lives, so without this a GPU run would crash with "Expected all tensors
+    to be on the same device." This machine is CPU-only (confirmed at task 1), so it's
+    defensive/portability code only. Verified: rerun with the seed fixed produced `Using
+    device: cpu` and byte-identical output to the pre-change run (accuracy 0.7984, precision
+    0.6398, recall 0.5508, f1 0.5920, same sweep values) — confirms `.to(device)` was a correct
+    no-op here, not a silent behavior change.
+
+**Next task:** 18. Expose training as a background job in the platform, reusing Stage 1's
+job-queue system (`BackgroundTasks`, job state machine: queued/running/completed/failed) —
+wire `scripts/train_churn_nn.py`'s logic into `app/services/` behind an endpoint, the same
+pattern used for CSV profiling jobs in Stage 1. After that: 19 (tests for model
+loading/inference), 20 (whatever the roadmap's final Stage 4 task is — check the HTML).
 
 **Security note (joblib):** `joblib.load`/pickle-based formats can execute arbitrary code if
 loading an untrusted file. Fine here since we only ever load artifacts this same project

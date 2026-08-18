@@ -10,6 +10,8 @@ import torch.nn as nn
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 
 torch.manual_seed(42)
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print(f"Using device: {device}")
 
 DATA_PATH = "data/telco_churn.csv"
 
@@ -86,6 +88,7 @@ class ChurnNet(nn.Module):
         return x
     
 model = ChurnNet(input_dim=X_train_tensor.shape[1])
+model.to(device)
 print(model)
 
 criterion = nn.BCEWithLogitsLoss()
@@ -96,6 +99,7 @@ def train_one_epoch(model, loader, criterion, optimizer):
     total_loss = 0.0
     for X_batch, y_batch in loader:
         optimizer.zero_grad()
+        X_batch, y_batch = X_batch.to(device), y_batch.to(device)
         outputs = model(X_batch)
         loss = criterion(outputs, y_batch)
         loss.backward()
@@ -109,6 +113,7 @@ def evaluate(model, loader, criterion):
     total_loss = 0.0
     with torch.no_grad():
         for X_batch, y_batch in loader:
+            X_batch, y_batch = X_batch.to(device), y_batch.to(device)
             outputs = model(X_batch)
             loss = criterion(outputs, y_batch)
             total_loss += loss.item() * X_batch.size(0)
@@ -121,6 +126,7 @@ def evaluate_metrics(model, loader):
     all_labels = []
     with torch.no_grad():
         for X_batch, y_batch in loader:
+            X_batch, y_batch = X_batch.to(device), y_batch.to(device)
             outputs = model(X_batch)
             probs = torch.sigmoid(outputs)
             preds = (probs > 0.5).float()
@@ -152,7 +158,6 @@ for epoch in range(1, EPOCHS + 1):
         best_val_loss = val_loss
         epochs_without_improvement = 0
         torch.save(model.state_dict(), "models/churn_nn_best.pt")
-        # (checkpoint save goes here — see step 3)
     else:
         epochs_without_improvement += 1
 
@@ -170,6 +175,7 @@ for name, value in val_metrics.items():
 
 def run_experiment(batch_size, lr, epochs=20):
     trial_model = ChurnNet(input_dim=X_train_tensor.shape[1])
+    trial_model.to(device)
     trial_criterion = nn.BCEWithLogitsLoss()
     trial_optimizer = torch.optim.Adam(trial_model.parameters(), lr=lr)
     trial_train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
