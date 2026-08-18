@@ -323,7 +323,7 @@ it to a new `Pipeline`.
     `clone()` fix for the shared-preprocessor mutation bug). Both pass; full suite (17 tests
     total across unit + integration) confirmed green.
 
-## Stage 3 is complete (17/17). In progress: Stage 4 — Deep Learning with PyTorch (11/20 tasks done)
+## Stage 3 is complete (17/17). In progress: Stage 4 — Deep Learning with PyTorch (13/20 tasks done)
 
 Replace one classical model with a neural network built from a custom PyTorch training loop
 (not a high-level abstraction) — tensors, Datasets/DataLoaders, a feed-forward network, loss
@@ -378,11 +378,48 @@ batches, consistent with ~5,634 train rows and ~1,409 val rows at batch size 32.
    showing up organically in a real run, not a deliberately broken example — direct, concrete
    setup for the early-stopping and checkpointing tasks next.
 
-**Next task:** "Experiment with batch size" + "Experiment with learning rate" — deliberately
-varying `BATCH_SIZE` (currently 32) and `lr` (currently 0.001) to see their effect on training
-dynamics, before "Add early stopping" (stop around the epoch where val_loss actually bottoms
-out — epoch 16 in the run above, not epoch 20) and "Save checkpoints" (persist the best-val-loss
-weights, not necessarily the final epoch's).
+12. Experiment with batch size — added `run_experiment(batch_size, lr, epochs=20)`, which
+    builds a **fresh** `trial_model`/`trial_criterion`/`trial_optimizer`/`trial_train_loader`/
+    `trial_val_loader` on every call (same `clone()`-the-shared-state lesson from Stage 3 —
+    reusing the main loop's `model`/`optimizer` across trials would silently contaminate later
+    trials with earlier-trial-trained weights) and returns the best val_loss seen across the
+    run. Swept `[8, 32, 128, 512]` at fixed `lr=0.001`:
+
+   | batch_size | best val_loss |
+   |---|---|
+   | 8 | 0.4182 |
+   | 32 | **0.4171** |
+   | 128 | 0.4194 |
+   | 512 | 0.4295 |
+
+   `32` wins. `8` is close behind (noisier but more frequent gradient updates). `128`/`512`
+   get progressively worse — fewer gradient updates per epoch means the model is still
+   under-converged relative to smaller batches within the same 20-epoch budget.
+
+13. Experiment with learning rate — same `run_experiment` helper, swept `[0.0001, 0.001, 0.01, 0.1]`
+    at fixed `batch_size=32`:
+
+   | lr | best val_loss |
+   |---|---|
+   | 0.0001 | 0.4256 |
+   | 0.001 | **0.4192** |
+   | 0.01 | 0.4223 |
+   | 0.1 | 0.4352 |
+
+   Textbook U-shape. `0.0001` is too cautious to converge in 20 epochs; `0.001` is the sweet
+   spot; `0.01` already starts overshooting the loss minimum; `0.1` is clearly unstable.
+
+   **Result of both sweeps:** the original default choices (`batch_size=32`, `lr=0.001`) beat
+   every alternative tested in both sweeps — confirmed, not assumed, via deliberate
+   experimentation.
+
+**Next task:** task 11 ("Track task-specific metrics") was skipped over during the main
+training-loop work and remains open — worth doing before or alongside early stopping, since a
+real early-stopping decision arguably shouldn't rely on raw loss alone for an imbalanced
+classification problem (echoes Stage 3's precision/recall-vs-accuracy lesson). Then "Add early
+stopping" (stop around the epoch where val_loss actually bottoms out — epoch 16 in the original
+20-epoch run) and "Save checkpoints" (persist the best-val-loss weights, not necessarily the
+final epoch's).
 
 **Security note (joblib):** `joblib.load`/pickle-based formats can execute arbitrary code if
 loading an untrusted file. Fine here since we only ever load artifacts this same project

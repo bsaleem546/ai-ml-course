@@ -678,7 +678,7 @@ function loadState() {
 let state = loadState();
 
 // One-time seed for Stage 0 tasks already completed before this tracker was used.
-const SEED_KEY = "ai-ml-roadmap-seeded-v44";
+const SEED_KEY = "ai-ml-roadmap-seeded-v45";
 if (!localStorage.getItem(SEED_KEY)) {
   const stage0Done = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]; // indexes into stages[0].tasks
   stage0Done.forEach(j => { state[`0:${j}`] = true; });
@@ -688,7 +688,7 @@ if (!localStorage.getItem(SEED_KEY)) {
   stage2Done.forEach(j => { state[`2:${j}`] = true; });
   const stage3Done = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]; // indexes into stages[3].tasks
   stage3Done.forEach(j => { state[`3:${j}`] = true; });
-  const stage4Done = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]; // indexes into stages[4].tasks
+  const stage4Done = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 13]; // indexes into stages[4].tasks
   stage4Done.forEach(j => { state[`4:${j}`] = true; });
   localStorage.setItem(STORAGE, JSON.stringify(state));
   localStorage.setItem(SEED_KEY, "1");

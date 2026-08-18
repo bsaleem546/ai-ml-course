@@ -117,3 +117,29 @@ for epoch in range(1, EPOCHS + 1):
     train_loss = train_one_epoch(model, train_loader, criterion, optimizer)
     val_loss = evaluate(model, val_loader, criterion)
     print(f"Epoch {epoch}/{EPOCHS} — train_loss: {train_loss:.4f}, val_loss: {val_loss:.4f}")
+    
+    
+def run_experiment(batch_size, lr, epochs=20):
+    trial_model = ChurnNet(input_dim=X_train_tensor.shape[1])
+    trial_criterion = nn.BCEWithLogitsLoss()
+    trial_optimizer = torch.optim.Adam(trial_model.parameters(), lr=lr)
+    trial_train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    trial_val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
+
+    best_val_loss = float("inf")
+    for epoch in range(1, epochs + 1):
+        train_one_epoch(trial_model, trial_train_loader, trial_criterion, trial_optimizer)
+        val_loss = evaluate(trial_model, trial_val_loader, trial_criterion)
+        best_val_loss = min(best_val_loss, val_loss)
+    return best_val_loss
+
+
+print("\n=== Batch size sweep (lr=0.001) ===")
+for bs in [8, 32, 128, 512]:
+    best_val = run_experiment(batch_size=bs, lr=0.001)
+    print(f"batch_size={bs}: best val_loss={best_val:.4f}")
+
+print("\n=== Learning rate sweep (batch_size=32) ===")
+for lr in [0.0001, 0.001, 0.01, 0.1]:
+    best_val = run_experiment(batch_size=32, lr=lr)
+    print(f"lr={lr}: best val_loss={best_val:.4f}")
