@@ -323,7 +323,7 @@ it to a new `Pipeline`.
     `clone()` fix for the shared-preprocessor mutation bug). Both pass; full suite (17 tests
     total across unit + integration) confirmed green.
 
-## Stage 3 is complete (17/17). In progress: Stage 4 — Deep Learning with PyTorch (1/20 tasks done)
+## Stage 3 is complete (17/17). In progress: Stage 4 — Deep Learning with PyTorch (4/20 tasks done)
 
 Replace one classical model with a neural network built from a custom PyTorch training loop
 (not a high-level abstraction) — tensors, Datasets/DataLoaders, a feed-forward network, loss
@@ -337,10 +337,24 @@ new **`scripts/train_churn_nn.py`** (same standalone-script pattern as Stages 2/
    `2.13.0+cu130`. `torch.cuda.is_available()` → `False` (no NVIDIA GPU on this machine,
    expected) — training will run on CPU throughout this stage.
 
-**Next task:** "Convert a dataset into tensors" + "Implement a PyTorch Dataset" +
-"Implement a DataLoader" — the PyTorch equivalent of Stage 2's `ColumnTransformer`
-preprocessing pipeline, but converting to tensors instead of numpy arrays, and wrapping in
-PyTorch's `Dataset`/`DataLoader` abstractions for batched training.
+2. Convert a dataset into tensors — reused the Stage 2 `ColumnTransformer` preprocessing
+   pattern (impute + scale numeric, impute + one-hot categorical), fit on `X_train` only,
+   then converted the resulting numpy arrays to `torch.float32` tensors. Labels reshaped via
+   `.unsqueeze(1)` from `(N,)` to `(N, 1)` to match the shape PyTorch loss functions expect
+   against the network's output layer.
+3. Implement a PyTorch Dataset — `ChurnDataset(Dataset)` with `__len__`/`__getitem__`.
+4. Implement a DataLoader — `train_loader` (`shuffle=True`, batches the model actually
+   trains on) and `val_loader` (`shuffle=False`, evaluation only), `batch_size=32` as a
+   starting point (to be tuned explicitly later in this stage).
+
+**Gotcha hit and fixed:** the `ChurnDataset` class was defined but never instantiated —
+`train_dataset`/`val_dataset` (and `BATCH_SIZE`) were referenced by the `DataLoader` calls
+without ever being created, `NameError`. Fixed by adding the missing instantiation lines
+between the class definition and the `DataLoader` calls. Verified: 177 train batches / 45 val
+batches, consistent with ~5,634 train rows and ~1,409 val rows at batch size 32.
+
+**Next task:** "Build a small feed-forward neural network" + "Implement forward pass" — the
+actual network architecture, defined as a PyTorch `nn.Module`.
 
 **Security note (joblib):** `joblib.load`/pickle-based formats can execute arbitrary code if
 loading an untrusted file. Fine here since we only ever load artifacts this same project
