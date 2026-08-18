@@ -323,7 +323,7 @@ it to a new `Pipeline`.
     `clone()` fix for the shared-preprocessor mutation bug). Both pass; full suite (17 tests
     total across unit + integration) confirmed green.
 
-## Stage 3 is complete (17/17). In progress: Stage 4 — Deep Learning with PyTorch (18/20 tasks done)
+## Stage 3 is complete (17/17). Stage 4 is complete (20/20 tasks done).
 
 Replace one classical model with a neural network built from a custom PyTorch training loop
 (not a high-level abstraction) — tensors, Datasets/DataLoaders, a feed-forward network, loss
@@ -484,11 +484,30 @@ batches, consistent with ~5,634 train rows and ~1,409 val rows at batch size 32.
     returned `404`, and the checkpoint file (`models/nn_job_1_best.pt`) was confirmed present
     inside the container via the existing `models_data` volume.
 
-**Next task:** 19. Add tests for model loading and inference — likely `tests/unit/` or
-`tests/integration/`, covering the NN training-job flow (e.g. job transitions to completed
-with valid metrics) and/or loading a saved checkpoint back for inference, mirroring the
-testing conventions from `tests/unit/test_preprocessing.py` (Stage 3). After that: 20
-(whatever the roadmap's final Stage 4 task is — check the HTML for the exact task list).
+19. Add tests for model loading and inference — `tests/unit/test_nn_training_job_service.py`,
+    three tests: two mirror `test_job_service.py`'s pattern (mock the repository layer with
+    `pytest-mock`, verify `run_training_job`'s guard clauses — skips a job that's already
+    `completed`, does nothing when the job id doesn't exist — without touching a real DB or
+    running actual training), and one (`test_load_checkpoint_and_run_inference`) exercises the
+    real save/reload/forward-pass mechanics from tasks 15/16 using pytest's built-in `tmp_path`
+    fixture: build a `ChurnNet`, save its `state_dict()`, load it into a fresh model instance,
+    run a forward pass on a zero tensor, assert the output shape is `(1, 1)`. All 3 pass; full
+    suite green at 20/20 (17 prior + these 3).
+
+    **Gotcha hit and fixed:** `tests/integration/conftest.py`'s cleanup fixture only deleted
+    `IngestionJob`/`Dataset` rows after each test, never updated for the new `nn_training_jobs`
+    table — any test creating an `NnTrainingJob` row would leave a dangling foreign key and
+    block the next test run's `DELETE FROM datasets` with `ForeignKeyViolationError`. Surfaced
+    by a stray dataset (id 68) created during manual endpoint testing against the wrong DB
+    (`.env`'s Neon-hosted Postgres — same DB `pytest` runs against locally — instead of
+    Docker's separate local Postgres; see task 18's note on this project having two distinct
+    databases). Fixed by adding `await session.execute(delete(NnTrainingJob))` to the fixture,
+    ordered before the existing `IngestionJob`/`Dataset` deletes (children before parents, same
+    FK-respecting order the fixture already used).
+
+## Stage 4 is complete (20/20). Next: check `ai_ml_engineer_build_first_roadmap.html` for
+Stage 5 ("Neural Network From Scratch" — reimplementing a tiny network in NumPy, no PyTorch,
+to make gradients/loss/parameter updates concrete before returning to PyTorch's autograd).
 
 **Security note (joblib):** `joblib.load`/pickle-based formats can execute arbitrary code if
 loading an untrusted file. Fine here since we only ever load artifacts this same project
