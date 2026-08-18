@@ -45,3 +45,15 @@ class IngestionJobResponse(BaseModel):
     dataset_id: int
     status: str
     error_message: str | None = None
+    
+    
+class NnTrainingJobResponse(BaseModel):
+    id: int
+    dataset_id: int
+    status: str
+    error_message: str | None = None
+    artifact_path: str | None = None
+    accuracy: float | None = None
+    precision: float | None = None
+    recall: float | None = None
+    f1: float | None = None

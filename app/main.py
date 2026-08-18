@@ -10,6 +10,7 @@ from app.services.dataset_service import DatasetNotFoundError, InvalidFileError
 from app.services.job_service import JobNotFoundError
 from app.services.model_service import ModelNotFoundError
 from app.services.model_service import InvalidPredictionInputError
+from app.services.nn_training_job_service import NnTrainingJobNotFoundError
 
 
 logger = logging.getLogger(__name__)
@@ -62,5 +63,12 @@ async def model_not_found_handler(request: Request, exc: ModelNotFoundError) -> 
 async def invalid_prediction_input_handler(request: Request, exc: InvalidPredictionInputError) -> JSONResponse:
     return JSONResponse(
         status_code=status.HTTP_400_BAD_REQUEST,
+        content={"detail": str(exc)},
+    )
+
+@app.exception_handler(NnTrainingJobNotFoundError)
+async def nn_training_job_not_found_handler(request: Request, exc: NnTrainingJobNotFoundError) -> JSONResponse:
+    return JSONResponse(
+        status_code=status.HTTP_404_NOT_FOUND,
         content={"detail": str(exc)},
     )

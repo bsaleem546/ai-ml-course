@@ -20,6 +20,9 @@ from app.models.trained_model import TrainedModel
 from app.schemas.model import ModelMetrics, ModelResponse, ModelTrainRequest, PredictRequest, PredictResponse
 from app.services import model_service
 
+from app.services import nn_training_job_service
+from app.schemas.dataset import NnTrainingJobResponse
+
 router = APIRouter()
 
 
@@ -108,3 +111,19 @@ async def predict(model_id: int, payload: PredictRequest, db: AsyncSession = Dep
     model = await model_service.get_model(db, model_id)
     prediction, probability = model_service.predict_churn(model, payload.features)
     return PredictResponse(churn_prediction=prediction, churn_probability=probability)
+
+@router.post("/models/train-nn", response_model=NnTrainingJobResponse, status_code=status.HTTP_202_ACCEPTED)
+async def train_model_nn(
+    payload: ModelTrainRequest,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+) -> NnTrainingJobResponse:
+    job = await nn_training_job_service.create_job(db, dataset_id=payload.dataset_id)
+    background_tasks.add_task(nn_training_job_service.run_training_job, job.id)
+    return job
+
+
+@router.get("/nn-jobs/{job_id}", response_model=NnTrainingJobResponse)
+async def get_nn_job(job_id: int, db: AsyncSession = Depends(get_db)) -> NnTrainingJobResponse:
+    job = await nn_training_job_service.get_job(db, job_id)
+    return job

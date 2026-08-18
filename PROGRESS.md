@@ -323,7 +323,7 @@ it to a new `Pipeline`.
     `clone()` fix for the shared-preprocessor mutation bug). Both pass; full suite (17 tests
     total across unit + integration) confirmed green.
 
-## Stage 3 is complete (17/17). In progress: Stage 4 — Deep Learning with PyTorch (17/20 tasks done)
+## Stage 3 is complete (17/17). In progress: Stage 4 — Deep Learning with PyTorch (18/20 tasks done)
 
 Replace one classical model with a neural network built from a custom PyTorch training loop
 (not a high-level abstraction) — tensors, Datasets/DataLoaders, a feed-forward network, loss
@@ -458,11 +458,37 @@ batches, consistent with ~5,634 train rows and ~1,409 val rows at batch size 32.
     0.6398, recall 0.5508, f1 0.5920, same sweep values) — confirms `.to(device)` was a correct
     no-op here, not a silent behavior change.
 
-**Next task:** 18. Expose training as a background job in the platform, reusing Stage 1's
-job-queue system (`BackgroundTasks`, job state machine: queued/running/completed/failed) —
-wire `scripts/train_churn_nn.py`'s logic into `app/services/` behind an endpoint, the same
-pattern used for CSV profiling jobs in Stage 1. After that: 19 (tests for model
-loading/inference), 20 (whatever the roadmap's final Stage 4 task is — check the HTML).
+18. Expose training as a background job in the platform — new table `nn_training_jobs`
+    (migration `6d71725beeb3`, model `app/models/nn_training_job.py`: `id`, `dataset_id` FK,
+    `status`, `error_message`, `artifact_path`, `accuracy`/`precision`/`recall`/`f1`), a
+    repository (`app/repositories/nn_training_job_repository.py`, mirrors `job_repository.py`),
+    and a service (`app/services/nn_training_job_service.py`) that transplants the script's
+    `ChurnDataset`/`ChurnNet`/training-loop/early-stopping/checkpointing/reload logic into an
+    async `run_training_job(job_id)` following the exact `run_ingestion_job` job-state-machine
+    pattern from Stage 1 (queued → running → completed/failed, try/except wraps the whole run).
+    Two new routes: `POST /api/v1/models/train-nn` (creates the job, schedules it via
+    `BackgroundTasks`, returns immediately with `status: "queued"` — non-blocking, unlike the
+    synchronous `POST /models/train` for classical models) and `GET /api/v1/nn-jobs/{id}`
+    (poll for status/result; `NnTrainingJobNotFoundError` → `404`, registered in `main.py`
+    same as the other not-found handlers).
+
+    **Verified against the actual Docker stack** (this project's DB is `docker compose`'s local
+    Postgres, separate from the Neon-hosted one `.env` points to by default — an earlier local
+    `uv run uvicorn` test run hit Neon instead and left one harmless throwaway dataset/job
+    there). After `docker compose up --build -d` (picks up the new model/service/route code)
+    and `docker compose exec api uv run alembic upgrade head` (applies the migration to
+    Docker's Postgres), full flow confirmed: uploaded a dataset, `POST /models/train-nn`
+    returned `{"status": "queued"}` immediately, polling `GET /nn-jobs/1` showed it reach
+    `completed` with real metrics (accuracy 0.8013, precision 0.6526, recall 0.5374,
+    f1 0.5894 — consistent with the standalone script's numbers), unknown job id correctly
+    returned `404`, and the checkpoint file (`models/nn_job_1_best.pt`) was confirmed present
+    inside the container via the existing `models_data` volume.
+
+**Next task:** 19. Add tests for model loading and inference — likely `tests/unit/` or
+`tests/integration/`, covering the NN training-job flow (e.g. job transitions to completed
+with valid metrics) and/or loading a saved checkpoint back for inference, mirroring the
+testing conventions from `tests/unit/test_preprocessing.py` (Stage 3). After that: 20
+(whatever the roadmap's final Stage 4 task is — check the HTML for the exact task list).
 
 **Security note (joblib):** `joblib.load`/pickle-based formats can execute arbitrary code if
 loading an untrusted file. Fine here since we only ever load artifacts this same project
