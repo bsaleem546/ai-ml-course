@@ -84,3 +84,6 @@ class ChurnNet(nn.Module):
     
 model = ChurnNet(input_dim=X_train_tensor.shape[1])
 print(model)
+
+criterion = nn.BCEWithLogitsLoss()
+optimizer = torch.optim.Adam(model.parameters(), lr=0.001)

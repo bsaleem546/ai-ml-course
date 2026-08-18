@@ -323,7 +323,7 @@ it to a new `Pipeline`.
     `clone()` fix for the shared-preprocessor mutation bug). Both pass; full suite (17 tests
     total across unit + integration) confirmed green.
 
-## Stage 3 is complete (17/17). In progress: Stage 4 — Deep Learning with PyTorch (6/20 tasks done)
+## Stage 3 is complete (17/17). In progress: Stage 4 — Deep Learning with PyTorch (8/20 tasks done)
 
 Replace one classical model with a neural network built from a custom PyTorch training loop
 (not a high-level abstraction) — tensors, Datasets/DataLoaders, a feed-forward network, loss
@@ -359,9 +359,16 @@ batches, consistent with ~5,634 train rows and ~1,409 val rows at batch size 32.
    sigmoid internally more numerically stably). Verified via `print(model)`'s auto-generated
    structure summary, matches the intended architecture exactly.
 
-**Next task:** "Choose an appropriate loss function" + "Implement optimizer" — `BCEWithLogitsLoss`
-(binary cross-entropy for the logit output above) and an optimizer (likely Adam) that will
-actually update the network's weights during training.
+7. Choose an appropriate loss function + 8. Implement optimizer — `nn.BCEWithLogitsLoss()`
+   (binary cross-entropy fused with sigmoid, matching the network's raw-logit output) and
+   `torch.optim.Adam(model.parameters(), lr=0.001)`. Noted for later: `BCEWithLogitsLoss`
+   supports an optional `pos_weight` to upweight the minority (churn) class during training —
+   directly relevant given Stage 3's imbalance findings, not applied yet since it's not this
+   specific task's scope, but a concrete lever if the network's churn recall turns out weak.
+
+**Next task:** "Write the training loop yourself" + "Write the validation loop" — the actual
+5-step learning cycle (batch → forward pass → compute loss → backward pass → optimizer step)
+run explicitly, epoch by epoch, plus a separate no-gradient evaluation pass on `val_loader`.
 
 **Security note (joblib):** `joblib.load`/pickle-based formats can execute arbitrary code if
 loading an untrusted file. Fine here since we only ever load artifacts this same project
