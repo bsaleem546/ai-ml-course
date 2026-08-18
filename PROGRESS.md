@@ -505,9 +505,42 @@ batches, consistent with ~5,634 train rows and ~1,409 val rows at batch size 32.
     ordered before the existing `IngestionJob`/`Dataset` deletes (children before parents, same
     FK-respecting order the fixture already used).
 
-## Stage 4 is complete (20/20). Next: check `ai_ml_engineer_build_first_roadmap.html` for
-Stage 5 ("Neural Network From Scratch" — reimplementing a tiny network in NumPy, no PyTorch,
-to make gradients/loss/parameter updates concrete before returning to PyTorch's autograd).
+## Stage 4 is complete (20/20). In progress: Stage 5 — Neural Network From Scratch (6/12 tasks done)
+
+Rebuild a tiny neural network using plain NumPy — no PyTorch, no autograd — so backpropagation
+stops being a black box `.backward()` call and becomes calculus you derived and coded by hand.
+Deliberately uses a **tiny synthetic dataset** (not the churn data): predicting an exam score
+from hours studied, `X = [1,2,3,4,5]`, `y = [2,4,5,4,5]` — small enough to hand-verify every
+number. All work lives in a new **`scripts/nn_from_scratch.py`**. A full walkthrough of Stage 4
+(all 20 tasks explained with the churn example, plus the deep-learning-vs-from-scratch
+distinction) is written up in `docs/stage4_deep_learning_explained.md`.
+
+**Done:**
+1. Implement a simple linear model with NumPy — `y = w*x + b`, starting at `w=0, b=0` (an
+   untrained model that predicts 0 for every input).
+2. Implement a forward function — `forward(X, w, b)`. Verified: with `w=0, b=0`, prints
+   `[0. 0. 0. 0. 0.]` as expected.
+3. Implement a loss function — Mean Squared Error, `compute_loss(y_true, y_pred)`. Verified:
+   with all-zero predictions, loss = `17.2`, matching the hand-calculated `mean(y²)`.
+4. Derive and implement parameter gradients — hand-derived `dL/dw = -(2/n)Σx(y-y_pred)` and
+   `dL/db = -(2/n)Σ(y-y_pred)` via the chain rule, then coded as `compute_gradients()`.
+   Verified: `dw=-26.4, db=-8.0`, matching the by-hand calculation exactly before running the
+   code.
+5. Implement gradient descent manually — `w = w - lr*dw`, `b = b - lr*db` at `lr=0.01`.
+   Verified: `w=0.264, b=0.08` after one step, matching the hand-predicted values.
+6. Train the model on a tiny dataset — wrapped forward/loss/gradients/update into a 1000-epoch
+   loop. Loss fell from `17.2` → `0.4807` and leveled off (doesn't reach 0 since the 5 data
+   points aren't perfectly linear — some irreducible error is expected, not a bug). Final
+   learned parameters: `w=0.6177, b=2.1361`.
+
+**Next task:** 7. Add a hidden layer — extend the single `w*x+b` linear model into a small
+multi-layer network (input → hidden layer → output), same shape as Stage 4's `ChurnNet` but
+implemented by hand. Requires deriving gradients through an extra layer (chain rule applied
+twice), which is the actual point of this task. Then: 8 (implement an activation function,
+e.g. ReLU or sigmoid, between layers — without one, stacking linear layers is mathematically
+still just one linear layer), 9 (train the multi-layer model), 10 (compare manual training
+with PyTorch), 11 (write down what autograd removes from the manual implementation), 12
+(document the complete training flow in the README).
 
 **Security note (joblib):** `joblib.load`/pickle-based formats can execute arbitrary code if
 loading an untrusted file. Fine here since we only ever load artifacts this same project
