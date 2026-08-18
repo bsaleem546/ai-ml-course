@@ -323,7 +323,7 @@ it to a new `Pipeline`.
     `clone()` fix for the shared-preprocessor mutation bug). Both pass; full suite (17 tests
     total across unit + integration) confirmed green.
 
-## Stage 3 is complete (17/17). In progress: Stage 4 — Deep Learning with PyTorch (4/20 tasks done)
+## Stage 3 is complete (17/17). In progress: Stage 4 — Deep Learning with PyTorch (6/20 tasks done)
 
 Replace one classical model with a neural network built from a custom PyTorch training loop
 (not a high-level abstraction) — tensors, Datasets/DataLoaders, a feed-forward network, loss
@@ -353,8 +353,15 @@ without ever being created, `NameError`. Fixed by adding the missing instantiati
 between the class definition and the `DataLoader` calls. Verified: 177 train batches / 45 val
 batches, consistent with ~5,634 train rows and ~1,409 val rows at batch size 32.
 
-**Next task:** "Build a small feed-forward neural network" + "Implement forward pass" — the
-actual network architecture, defined as a PyTorch `nn.Module`.
+5. Build a small feed-forward neural network + 6. Implement forward pass — `ChurnNet(nn.Module)`,
+   `45 → 32 → 16 → 1` (`Linear`/`ReLU` alternating), output layer produces a single raw logit
+   (no sigmoid — deliberately paired with `BCEWithLogitsLoss` in the next task, which applies
+   sigmoid internally more numerically stably). Verified via `print(model)`'s auto-generated
+   structure summary, matches the intended architecture exactly.
+
+**Next task:** "Choose an appropriate loss function" + "Implement optimizer" — `BCEWithLogitsLoss`
+(binary cross-entropy for the logit output above) and an optimizer (likely Adam) that will
+actually update the network's weights during training.
 
 **Security note (joblib):** `joblib.load`/pickle-based formats can execute arbitrary code if
 loading an untrusted file. Fine here since we only ever load artifacts this same project

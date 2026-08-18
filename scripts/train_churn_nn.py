@@ -6,6 +6,7 @@ from sklearn.compose import ColumnTransformer
 from sklearn.impute import SimpleImputer
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
+import torch.nn as nn
 
 DATA_PATH = "data/telco_churn.csv"
 
@@ -65,3 +66,21 @@ train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
 val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=False)
 
 print(f"train batches: {len(train_loader)}, val batches: {len(val_loader)}")
+
+class ChurnNet(nn.Module):
+    def __init__(self, input_dim):
+        super().__init__()
+        self.layer1 = nn.Linear(input_dim, 32)
+        self.relu1 = nn.ReLU()
+        self.layer2 = nn.Linear(32, 16)
+        self.relu2 = nn.ReLU()
+        self.output = nn.Linear(16, 1)
+
+    def forward(self, x):
+        x = self.relu1(self.layer1(x))
+        x = self.relu2(self.layer2(x))
+        x = self.output(x)
+        return x
+    
+model = ChurnNet(input_dim=X_train_tensor.shape[1])
+print(model)
