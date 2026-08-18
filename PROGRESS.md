@@ -323,12 +323,24 @@ it to a new `Pipeline`.
     `clone()` fix for the shared-preprocessor mutation bug). Both pass; full suite (17 tests
     total across unit + integration) confirmed green.
 
-## Stage 3 is complete (17/17). Next: Stage 4 — Deep Learning with PyTorch
+## Stage 3 is complete (17/17). In progress: Stage 4 — Deep Learning with PyTorch (1/20 tasks done)
 
 Replace one classical model with a neural network built from a custom PyTorch training loop
 (not a high-level abstraction) — tensors, Datasets/DataLoaders, a feed-forward network, loss
 functions, backprop, optimizers, checkpointing, GPU/CPU handling, and exposing training as a
-background job in the platform (tying back to Stage 1's job-queue system).
+background job in the platform (tying back to Stage 1's job-queue system). Same Telco churn
+dataset as Stage 2, for a direct comparison against the classical models. All work lives in a
+new **`scripts/train_churn_nn.py`** (same standalone-script pattern as Stages 2/3).
+
+**Done:**
+1. Install and configure PyTorch — `uv add --system-certs torch`. Installed version
+   `2.13.0+cu130`. `torch.cuda.is_available()` → `False` (no NVIDIA GPU on this machine,
+   expected) — training will run on CPU throughout this stage.
+
+**Next task:** "Convert a dataset into tensors" + "Implement a PyTorch Dataset" +
+"Implement a DataLoader" — the PyTorch equivalent of Stage 2's `ColumnTransformer`
+preprocessing pipeline, but converting to tensors instead of numpy arrays, and wrapping in
+PyTorch's `Dataset`/`DataLoader` abstractions for batched training.
 
 **Security note (joblib):** `joblib.load`/pickle-based formats can execute arbitrary code if
 loading an untrusted file. Fine here since we only ever load artifacts this same project
