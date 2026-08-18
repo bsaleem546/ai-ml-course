@@ -323,7 +323,7 @@ it to a new `Pipeline`.
     `clone()` fix for the shared-preprocessor mutation bug). Both pass; full suite (17 tests
     total across unit + integration) confirmed green.
 
-## Stage 3 is complete (17/17). In progress: Stage 4 — Deep Learning with PyTorch (13/20 tasks done)
+## Stage 3 is complete (17/17). In progress: Stage 4 — Deep Learning with PyTorch (15/20 tasks done)
 
 Replace one classical model with a neural network built from a custom PyTorch training loop
 (not a high-level abstraction) — tensors, Datasets/DataLoaders, a feed-forward network, loss
@@ -413,13 +413,38 @@ batches, consistent with ~5,634 train rows and ~1,409 val rows at batch size 32.
    every alternative tested in both sweeps — confirmed, not assumed, via deliberate
    experimentation.
 
-**Next task:** task 11 ("Track task-specific metrics") was skipped over during the main
-training-loop work and remains open — worth doing before or alongside early stopping, since a
-real early-stopping decision arguably shouldn't rely on raw loss alone for an imbalanced
-classification problem (echoes Stage 3's precision/recall-vs-accuracy lesson). Then "Add early
-stopping" (stop around the epoch where val_loss actually bottoms out — epoch 16 in the original
-20-epoch run) and "Save checkpoints" (persist the best-val-loss weights, not necessarily the
-final epoch's).
+11. Track task-specific metrics — added `evaluate_metrics(model, loader)`: runs the model in
+    eval mode, converts raw logits to probabilities via `torch.sigmoid`, thresholds at 0.5,
+    concatenates predictions/labels across all batches (not per-batch averaging, which would
+    be mathematically wrong for precision/recall), then calls sklearn's `accuracy_score`/
+    `precision_score`/`recall_score`/`f1_score` on the full validation set. Also added
+    `torch.manual_seed(42)` near the top for reproducibility — an early sweep rerun showed
+    the "best" batch_size/lr flipping between runs purely from unseeded weight
+    initialization, the same "single noisy result isn't trustworthy" lesson Stage 3 taught
+    with train/val splits vs. cross-validation. First seeded run: accuracy 0.7942, precision
+    0.6288, recall 0.5481, f1 0.5857 (measured at epoch 20, before early stopping existed).
+
+12–13. (already recorded above) Batch size and learning rate sweeps.
+
+14. Add early stopping — tracks `best_val_loss` and an `epochs_without_improvement` counter
+    (`patience=3`); breaks out of the training loop once val_loss hasn't improved for 3
+    consecutive epochs instead of always running the full 20. Verified: seeded run stopped at
+    epoch 7 (val_loss bottomed at epoch 4, 0.4215; no improvement through epochs 5–7), saving
+    ~13 epochs of unnecessary training.
+15. Save checkpoints — `torch.save(model.state_dict(), "models/churn_nn_best.pt")` inside the
+    "val_loss improved" branch, so only genuinely-better epochs overwrite the file.
+    **Gotcha hit and fixed:** unlike `joblib.dump` (Stage 2), `torch.save` does **not**
+    auto-create missing parent directories — first run crashed with
+    `RuntimeError: Parent directory models does not exist` (the gitignored `models/` folder
+    wasn't present on this machine). Fixed by creating the directory (`mkdir -p models`).
+
+**Next task:** 16. Load checkpoints for inference — `model.load_state_dict(torch.load(...))`
+already added right before the final `evaluate_metrics` call, reloading the best checkpointed
+weights (not whatever epoch the loop happened to stop on) before reporting final metrics.
+Written but not yet verified with a fresh run/output — confirm the printed final metrics
+change from the pre-reload numbers above, then this is done. After that: 17 (detect
+CUDA/move to GPU — defensive code only, this machine is CPU-only), 18 (expose training as a
+background job, reusing Stage 1's job-queue system), 19 (tests for model loading/inference).
 
 **Security note (joblib):** `joblib.load`/pickle-based formats can execute arbitrary code if
 loading an untrusted file. Fine here since we only ever load artifacts this same project

@@ -7,6 +7,9 @@ from sklearn.impute import SimpleImputer
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 import torch.nn as nn
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
+
+torch.manual_seed(42)
 
 DATA_PATH = "data/telco_churn.csv"
 
@@ -112,13 +115,59 @@ def evaluate(model, loader, criterion):
     return total_loss / len(loader.dataset)
 
 
+def evaluate_metrics(model, loader):
+    model.eval()
+    all_preds = []
+    all_labels = []
+    with torch.no_grad():
+        for X_batch, y_batch in loader:
+            outputs = model(X_batch)
+            probs = torch.sigmoid(outputs)
+            preds = (probs > 0.5).float()
+            all_preds.append(preds)
+            all_labels.append(y_batch)
+
+    all_preds = torch.cat(all_preds).numpy()
+    all_labels = torch.cat(all_labels).numpy()
+
+    return {
+        "accuracy": accuracy_score(all_labels, all_preds),
+        "precision": precision_score(all_labels, all_preds),
+        "recall": recall_score(all_labels, all_preds),
+        "f1": f1_score(all_labels, all_preds),
+    }
+
+
 EPOCHS = 20
+best_val_loss = float("inf")
+patience = 3
+epochs_without_improvement = 0
+
 for epoch in range(1, EPOCHS + 1):
     train_loss = train_one_epoch(model, train_loader, criterion, optimizer)
     val_loss = evaluate(model, val_loader, criterion)
     print(f"Epoch {epoch}/{EPOCHS} — train_loss: {train_loss:.4f}, val_loss: {val_loss:.4f}")
-    
-    
+
+    if val_loss < best_val_loss:
+        best_val_loss = val_loss
+        epochs_without_improvement = 0
+        torch.save(model.state_dict(), "models/churn_nn_best.pt")
+        # (checkpoint save goes here — see step 3)
+    else:
+        epochs_without_improvement += 1
+
+    if epochs_without_improvement >= patience:
+        print(f"Early stopping at epoch {epoch} (no improvement for {patience} epochs)")
+        break
+
+model.load_state_dict(torch.load("models/churn_nn_best.pt"))
+val_metrics = evaluate_metrics(model, val_loader)
+
+print("\n=== Final validation metrics ===")
+for name, value in val_metrics.items():
+    print(f"{name}: {value:.4f}")
+
+
 def run_experiment(batch_size, lr, epochs=20):
     trial_model = ChurnNet(input_dim=X_train_tensor.shape[1])
     trial_criterion = nn.BCEWithLogitsLoss()
