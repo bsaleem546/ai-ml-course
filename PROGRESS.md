@@ -505,7 +505,7 @@ batches, consistent with ~5,634 train rows and ~1,409 val rows at batch size 32.
     ordered before the existing `IngestionJob`/`Dataset` deletes (children before parents, same
     FK-respecting order the fixture already used).
 
-## Stage 4 is complete (20/20). In progress: Stage 5 — Neural Network From Scratch (6/12 tasks done)
+## Stage 4 is complete (20/20). In progress: Stage 5 — Neural Network From Scratch (7/12 tasks done)
 
 Rebuild a tiny neural network using plain NumPy — no PyTorch, no autograd — so backpropagation
 stops being a black box `.backward()` call and becomes calculus you derived and coded by hand.
@@ -533,14 +533,29 @@ distinction) is written up in `docs/stage4_deep_learning_explained.md`.
    points aren't perfectly linear — some irreducible error is expected, not a bug). Final
    learned parameters: `w=0.6177, b=2.1361`.
 
-**Next task:** 7. Add a hidden layer — extend the single `w*x+b` linear model into a small
-multi-layer network (input → hidden layer → output), same shape as Stage 4's `ChurnNet` but
-implemented by hand. Requires deriving gradients through an extra layer (chain rule applied
-twice), which is the actual point of this task. Then: 8 (implement an activation function,
-e.g. ReLU or sigmoid, between layers — without one, stacking linear layers is mathematically
-still just one linear layer), 9 (train the multi-layer model), 10 (compare manual training
-with PyTorch), 11 (write down what autograd removes from the manual implementation), 12
-(document the complete training flow in the README).
+7. Add a hidden layer + 8. Implement an activation function — extended the single `w*x+b`
+   linear model into a small multi-layer network (input → hidden → output) with the same shape
+   idea as Stage 4's `ChurnNet`, implemented entirely by hand in NumPy: `W1(1,3)`/`b1(3)` and
+   `W2(3,1)`/`b2(1)`, weights initialized small (`randn * 0.1`, `np.random.seed(42)`), with
+   **ReLU** as the activation function (plus `relu_derivative` for backprop — the `(z > 0)`
+   mask, which is the key to the activation-function task: by hand, unlike in PyTorch, the
+   derivative has to be coded explicitly). Wrote `forward_multilayer` (returns `z1, hidden,
+   output` for backprop) and, the actual point of the task, `compute_gradients_multilayer` —
+   backprop through the extra layer via the chain rule applied twice: `d_output` → `dW2`/`db2`
+   directly, then `d_hidden = d_output @ W2.T` → `d_z1 = d_hidden * relu_derivative(z1)` →
+   `dW1`/`db1`. **Shape bug hit and fixed:** `y` was shape `(5,)` while `output` is `(5,1)`,
+   so `y - output` broadcast to `(5,5)` instead of element-wise `(5,1)`; fixed with
+   `y.reshape(-1, 1)`. Trained 1000 epochs at `lr=0.01`, `loss` fell from `17.04` → `0.4800`
+   (converging to the same irreducible minimum as the single-layer linear model — this tiny
+   dataset isn't perfectly linear). Nice organic observation: `b1[1] = 0.0` — the middle
+   hidden unit is a **dead ReLU** (its activation is always 0, so no gradient ever reaches it
+   and its weight never updates) — a concrete, real example of a concept usually met only in
+   deep-learning literature.
+
+**Next task:** 9. Train the multi-layer model — that 1000-epoch loop is already implicitly done
+in task 7, so the remaining genuinely-new work is: 10 (compare manual training with PyTorch),
+11 (write down what autograd removes from the manual implementation), 12 (document the complete
+training flow in the README).
 
 **Security note (joblib):** `joblib.load`/pickle-based formats can execute arbitrary code if
 loading an untrusted file. Fine here since we only ever load artifacts this same project
