@@ -505,7 +505,7 @@ batches, consistent with ~5,634 train rows and ~1,409 val rows at batch size 32.
     ordered before the existing `IngestionJob`/`Dataset` deletes (children before parents, same
     FK-respecting order the fixture already used).
 
-## Stage 4 is complete (20/20). In progress: Stage 5 — Neural Network From Scratch (7/12 tasks done)
+## Stage 4 is complete (20/20). In progress: Stage 5 — Neural Network From Scratch (8/12 tasks done)
 
 Rebuild a tiny neural network using plain NumPy — no PyTorch, no autograd — so backpropagation
 stops being a black box `.backward()` call and becomes calculus you derived and coded by hand.
