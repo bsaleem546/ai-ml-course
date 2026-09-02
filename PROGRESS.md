@@ -505,7 +505,7 @@ batches, consistent with ~5,634 train rows and ~1,409 val rows at batch size 32.
     ordered before the existing `IngestionJob`/`Dataset` deletes (children before parents, same
     FK-respecting order the fixture already used).
 
-## Stage 4 is complete (20/20). In progress: Stage 5 — Neural Network From Scratch (8/12 tasks done)
+## Stage 4 is complete (20/20). In progress: Stage 5 — Neural Network From Scratch (9/12 tasks done)
 
 Rebuild a tiny neural network using plain NumPy — no PyTorch, no autograd — so backpropagation
 stops being a black box `.backward()` call and becomes calculus you derived and coded by hand.
@@ -552,10 +552,14 @@ distinction) is written up in `docs/stage4_deep_learning_explained.md`.
    and its weight never updates) — a concrete, real example of a concept usually met only in
    deep-learning literature.
 
-**Next task:** 9. Train the multi-layer model — that 1000-epoch loop is already implicitly done
-in task 7, so the remaining genuinely-new work is: 10 (compare manual training with PyTorch),
-11 (write down what autograd removes from the manual implementation), 12 (document the complete
-training flow in the README).
+9. Train the multi-layer model — ran the existing 1000-epoch loop (`scripts/nn_from_scratch.py`
+   lines 55-72) end to end. Loss fell `17.0407` → `0.4800`, plateauing by ~epoch 600 — matches
+   the single-layer model's floor exactly (same irreducible error, the 5 points aren't
+   perfectly linear). Confirmed the dead ReLU unit from task 7/8 again: `b1[1] = 0.0`, that
+   hidden unit's weights stay near their tiny random init since no gradient ever reaches it.
+
+**Next task:** 10. Compare manual training with PyTorch, 11 (write down what autograd removes
+from the manual implementation), 12 (document the complete training flow in the README).
 
 **Security note (joblib):** `joblib.load`/pickle-based formats can execute arbitrary code if
 loading an untrusted file. Fine here since we only ever load artifacts this same project
