@@ -538,4 +538,58 @@ Unit tests (`tests/unit/test_profile_service.py`, `test_job_service.py`) mock de
 
 Integration tests (`tests/integration/test_ingestion_pipeline.py`) exercise the real upload → background job → poll flow through the actual API + DB. Note: the test asserts the job is `"completed"` immediately after the upload response, with no sleep/retry — this works because in-process ASGI test clients (`httpx.AsyncClient` + `ASGITransport`) execute `BackgroundTasks` before returning control from the request, unlike a real deployed server handling genuinely concurrent traffic. Don't rely on this timing assumption outside tests.
 
+## Stage 5 — Neural Network From Scratch
+
+Stages 2–4 (Classical ML, ML Failure Lab, Deep Learning with PyTorch) aren't logged here step-by-step — see `PROGRESS.md` for the full task-by-task record, and `docs/failure_lab_findings.md` / `docs/stage4_deep_learning_explained.md` for their write-ups. Stage 5 resumes the README log since it's a small, self-contained pair of standalone scripts (no app/API changes) that are easiest to follow as a build log.
+
+Goal: implement backpropagation by hand in plain NumPy — no autograd, no PyTorch — against a tiny hand-verifiable synthetic dataset (`X = [1,2,3,4,5]` hours studied, `y = [2,4,5,4,5]` exam score), then compare the result against PyTorch's `.backward()` on the identical setup. All work lives in `scripts/nn_from_scratch.py` and `scripts/nn_pytorch_comparison.py`.
+
+### 1–6. Single-layer linear model, trained manually
+
+Starting point: `y = w*x + b`, `w=0, b=0`. Implemented `forward(X, w, b)`, Mean Squared Error as `compute_loss(y_true, y_pred)`, and hand-derived gradients via the chain rule:
+
+```
+dL/dw = -(2/n) * Σ x*(y - y_pred)
+dL/db = -(2/n) * Σ   (y - y_pred)
+```
+
+coded as `compute_gradients(X, y_true, y_pred)`, then plain gradient descent (`w -= lr*dw`, `b -= lr*db`, `lr=0.01`) run for 1000 epochs. Loss fell `17.2 → 0.4807` and plateaued — the 5 points aren't perfectly linear, so this residual is expected irreducible error, not a bug.
+
+### 7–9. Add a hidden layer, implement ReLU, train the multi-layer model
+
+Extended the single `w*x+b` model into input → hidden(3) → output, entirely by hand:
+
+```python
+def forward_multilayer(X, W1, b1, W2, b2):
+    z1 = X @ W1 + b1
+    hidden = relu(z1)
+    output = hidden @ W2 + b2
+    return z1, hidden, output
+```
+
+`relu(x) = np.maximum(0, x)` and its derivative `relu_derivative(z) = (z > 0).astype(float)` — required explicitly here since there's no autograd to infer it. Backprop through the extra layer (`compute_gradients_multilayer`) applies the chain rule twice: gradient at the output → `dW2`/`db2` directly, then pushed back through `W2` and the ReLU mask to get `d_z1` → `dW1`/`db1`.
+
+**Shape bug hit and fixed:** `y` as a 1-D array `(5,)` against `output`'s `(5,1)` broadcasts to a `(5,5)` matrix instead of element-wise subtraction — fixed by reshaping `y` to `(5,1)` up front, before it ever reaches the loop.
+
+Trained 1000 epochs at `lr=0.01`: loss fell `17.0407 → 0.4800`, converging to the same floor as the single-layer model (same irreducible error). One hidden unit (`b1[1]`) stayed at `0.0` the whole run — a **dead ReLU**: once that unit's pre-activation goes negative, its gradient is permanently zero (`relu_derivative` masks it out), so it never updates again. A concrete, organically-occurring example of a failure mode usually only described in deep-learning theory.
+
+### 10. Compare manual training against PyTorch
+
+`scripts/nn_pytorch_comparison.py` rebuilds the identical architecture in PyTorch (`nn.Linear(1,3) → nn.ReLU() → nn.Linear(3,1)`), with the *same starting weights* copied in from the NumPy script's pre-training `np.random.seed(42)` values — isolating the comparison to training method only, not initialization — and plain `SGD(lr=0.01)` (not Adam, to match the manual update rule exactly).
+
+Result: loss curve nearly identical epoch-by-epoch to the NumPy run (`17.0407 → 0.4800`), final weights matching to ~4 decimal places, and the same dead ReLU unit (`b1[1] = 0.0`) appearing independently. Confirms the hand-derived gradients are mathematically identical to what `.backward()` computes, not just coincidentally similar.
+
+### 11. What autograd removes
+
+Full writeup: `docs/nn_from_scratch_findings.md`. Short version: autograd eliminates (1) the backward-pass function itself, (2) manual chain-rule propagation through each layer, (3) hand-coded derivatives for every op, (4) per-parameter update lines, and (5) makes gradient accumulation implicit rather than something you have to reason about — at the cost of `optimizer.zero_grad()` becoming a real, easy-to-forget requirement rather than a non-issue.
+
+### 12. Run it yourself
+
+```bash
+uv run python scripts/nn_from_scratch.py
+uv run python scripts/nn_pytorch_comparison.py
+```
+
+No dependencies beyond what's already installed (`numpy`, `torch` — added in Stage 4).
+
 > **Gotcha:** once `IngestionJob` has a foreign key to `datasets.id`, `tests/integration/conftest.py`'s per-test cleanup (`DELETE FROM datasets`) started failing with `ForeignKeyViolationError` on any test that uploads a file (creating both a dataset and a job row). Fixed by deleting the child table first: `delete(IngestionJob)` before `delete(Dataset)`, same session, before the commit — standard FK cleanup ordering, children before parents.

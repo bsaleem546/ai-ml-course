@@ -505,7 +505,7 @@ batches, consistent with ~5,634 train rows and ~1,409 val rows at batch size 32.
     ordered before the existing `IngestionJob`/`Dataset` deletes (children before parents, same
     FK-respecting order the fixture already used).
 
-## Stage 4 is complete (20/20). In progress: Stage 5 — Neural Network From Scratch (10/12 tasks done)
+## Stage 4 is complete (20/20). Stage 5 — Neural Network From Scratch is complete (12/12 tasks done)
 
 Rebuild a tiny neural network using plain NumPy — no PyTorch, no autograd — so backpropagation
 stops being a black box `.backward()` call and becomes calculus you derived and coded by hand.
@@ -570,8 +570,24 @@ distinction) is written up in `docs/stage4_deep_learning_explained.md`.
    PyTorch's autograd computes — not just similar, converging to the same point from the same
    start.
 
-**Next task:** 11 (write down what autograd removes from the manual implementation), 12
-(document the complete training flow in the README).
+11. Write down what autograd removes from the manual implementation — **`docs/nn_from_scratch_findings.md`**:
+   five concrete things `.backward()` eliminates (the backward-pass function itself, manual
+   chain-rule propagation through each layer, hand-coded operation derivatives, per-parameter
+   update lines, and implicit gradient accumulation — the last one flips into a real footgun,
+   `optimizer.zero_grad()` isn't boilerplate, since PyTorch accumulates gradients across
+   `.backward()` calls by default), grounded in the actual matching numbers from task 10, plus
+   a short section on why the manual version still matters (debugging NaN/exploding gradients,
+   custom `autograd.Function`s, shape bugs that autograd won't flag as "wrong math").
+
+12. Document the complete training flow in the README — added a **"Stage 5 — Neural Network
+   From Scratch"** section to `README.md` (which had stopped logging at Stage 1; Stages 2-4
+   are tracked in `PROGRESS.md` + their own `docs/*.md` files instead — Stage 5 resumes the
+   README log since it's two small standalone scripts, easiest to follow as a build log).
+   Covers all 12 tasks: the single-layer model, the hidden-layer/ReLU/multi-layer training
+   loop (including the shape bug and dead-ReLU finding), the PyTorch comparison, and a link to
+   the new findings doc.
+
+## Stage 5 is complete (12/12).
 
 **Security note (joblib):** `joblib.load`/pickle-based formats can execute arbitrary code if
 loading an untrusted file. Fine here since we only ever load artifacts this same project
