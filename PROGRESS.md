@@ -505,7 +505,7 @@ batches, consistent with ~5,634 train rows and ~1,409 val rows at batch size 32.
     ordered before the existing `IngestionJob`/`Dataset` deletes (children before parents, same
     FK-respecting order the fixture already used).
 
-## Stage 4 is complete (20/20). In progress: Stage 5 — Neural Network From Scratch (9/12 tasks done)
+## Stage 4 is complete (20/20). In progress: Stage 5 — Neural Network From Scratch (10/12 tasks done)
 
 Rebuild a tiny neural network using plain NumPy — no PyTorch, no autograd — so backpropagation
 stops being a black box `.backward()` call and becomes calculus you derived and coded by hand.
@@ -558,8 +558,20 @@ distinction) is written up in `docs/stage4_deep_learning_explained.md`.
    perfectly linear). Confirmed the dead ReLU unit from task 7/8 again: `b1[1] = 0.0`, that
    hidden unit's weights stay near their tiny random init since no gradient ever reaches it.
 
-**Next task:** 10. Compare manual training with PyTorch, 11 (write down what autograd removes
-from the manual implementation), 12 (document the complete training flow in the README).
+10. Compare manual training with PyTorch — new **`scripts/nn_pytorch_comparison.py`**: same
+   tiny dataset, same architecture (`Linear(1,3)` → `ReLU` → `Linear(3,1)`), same starting
+   weights (hardcoded from `nn_from_scratch.py`'s pre-training `np.random.seed(42)` values, so
+   only the training *method* differs), plain `SGD(lr=0.01)` (not Adam, to match manual
+   gradient descent exactly), `nn.MSELoss()`, 1000 epochs. Result: loss curve nearly identical
+   epoch-by-epoch to the NumPy run (`17.0407` → `0.4800`), and final weights matched to ~4
+   decimal places (e.g. `W1: 0.5680` vs NumPy's `0.56798708`, `b2: 1.3178` vs `1.31780743`).
+   The same dead ReLU unit (`b1[1] = 0.0`) appeared independently in both runs. Confirms the
+   hand-derived backprop gradients from tasks 4/7-8 are mathematically identical to what
+   PyTorch's autograd computes — not just similar, converging to the same point from the same
+   start.
+
+**Next task:** 11 (write down what autograd removes from the manual implementation), 12
+(document the complete training flow in the README).
 
 **Security note (joblib):** `joblib.load`/pickle-based formats can execute arbitrary code if
 loading an untrusted file. Fine here since we only ever load artifacts this same project
