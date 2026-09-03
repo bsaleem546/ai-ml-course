@@ -587,7 +587,29 @@ distinction) is written up in `docs/stage4_deep_learning_explained.md`.
    loop (including the shape bug and dead-ReLU finding), the PyTorch comparison, and a link to
    the new findings doc.
 
-## Stage 5 is complete (12/12).
+## Stage 5 is complete (12/12). Stage 6 — LLM Application Layer in progress (1/16)
+
+Build a production-style LLM gateway: a vendor-neutral provider interface with adapters for
+Ollama (running as a **Docker Compose service**, not on the host — smallest model, e.g.
+`tinyllama` / `qwen2.5:0.5b`, because the host can't run anything bigger) and a hosted
+OpenAI-compatible provider. Then streaming, conversation storage, roles, token usage,
+timeouts/retries, structured JSON output, tool calling, Redis caching, rate limiting, tests,
+docs. Build shape: `client → FastAPI chat API → provider abstraction → hosted/local model`.
+
+**Done:**
+1. Create an LLM provider interface — new `app/llm/` package (`__init__.py` + `base.py`) and
+   `app/schemas/llm.py`. `base.py`: `LLMProvider(ABC)` with abstract `name` property and
+   abstract `async def complete(request: ChatRequest) -> ChatResponse` (bodies are `...`, no
+   SDK/httpx imports — the abstraction must not leak). `schemas/llm.py`: `ChatMessage`
+   (`role: Literal["system","user","assistant"]` + `content`), `TokenUsage`
+   (prompt/completion/total tokens), `ChatRequest` (messages, model, temperature 0.7 default
+   ge0/le2, max_tokens None default gt0), `ChatResponse` (content, model, `usage: TokenUsage
+   | None`). Plain `BaseModel`, matching existing schema style. Verified:
+   `uv run python -c "from app.llm.base import LLMProvider; LLMProvider()"` →
+   `TypeError: Can't instantiate abstract class LLMProvider without an implementation for
+   abstract methods 'complete', 'name'`.
+
+**Next task:** 2. Implement one hosted model provider (an OpenAI-compatible adapter).
 
 **Security note (joblib):** `joblib.load`/pickle-based formats can execute arbitrary code if
 loading an untrusted file. Fine here since we only ever load artifacts this same project
