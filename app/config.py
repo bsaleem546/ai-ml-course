@@ -8,5 +8,9 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379/0"
     environment: str = "development"
     db_ssl_required: bool = True
+    
+    groq_api_key: str | None = None
+    llm_base_url: str = "https://api.groq.com/openai/v1"
+    llm_default_model: str = "openai/gpt-oss-20b"
 
 settings = Settings()

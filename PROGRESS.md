@@ -587,7 +587,7 @@ distinction) is written up in `docs/stage4_deep_learning_explained.md`.
    loop (including the shape bug and dead-ReLU finding), the PyTorch comparison, and a link to
    the new findings doc.
 
-## Stage 5 is complete (12/12). Stage 6 — LLM Application Layer in progress (1/16)
+## Stage 5 is complete (12/12). Stage 6 — LLM Application Layer in progress (2/16)
 
 Build a production-style LLM gateway: a vendor-neutral provider interface with adapters for
 Ollama (running as a **Docker Compose service**, not on the host — smallest model, e.g.
@@ -609,7 +609,32 @@ docs. Build shape: `client → FastAPI chat API → provider abstraction → hos
    `TypeError: Can't instantiate abstract class LLMProvider without an implementation for
    abstract methods 'complete', 'name'`.
 
-**Next task:** 2. Implement one hosted model provider (an OpenAI-compatible adapter).
+2. Implement one hosted model provider — `app/llm/openai_compatible.py`:
+   `OpenAICompatibleProvider(LLMProvider)`, `__init__(base_url, api_key, provider_name)`,
+   `complete()` builds `{model, messages (via m.model_dump()), temperature, [max_tokens]}`,
+   `POST {base_url}/chat/completions` with `Authorization: Bearer`, `raise_for_status()`,
+   maps `choices[0].message.content` / `model` / `usage` → `ChatResponse`. Uses a per-call
+   `httpx.AsyncClient` (shared client is a later optimization; `httpx` 0.28.1 already present,
+   added explicitly via `uv add`). Provider chosen: **Groq** (`https://api.groq.com/openai/v1`,
+   free tier, OpenAI-compatible). Config added to `app/config.py`: `groq_api_key`,
+   `llm_base_url`, `llm_default_model` + matching vars in `.env`/`.env.example`.
+
+   **Gotcha:** `llama-3.1-8b-instant` (the initially-chosen default) 404s — Groq has retired the
+   small Llama models from this account's listing. Switched `llm_default_model` to
+   `openai/gpt-oss-20b` (confirmed available via `GET /v1/models`). Note: gpt-oss models return
+   an extra `reasoning` field in the message and count `reasoning_tokens` inside
+   `completion_tokens`, so `completion_tokens` looks large vs. the visible answer (186 for a
+   3-word reply) — adapter correctly ignores `reasoning` and reads only `content`.
+
+   **Also hit:** one run failed with `httpx.ConnectError: [Errno -3] Temporary failure in name
+   resolution` — transient host DNS blip, not a code/config issue; immediate re-run succeeded.
+   Verified: `ChatResponse(content='Hello there friend', model='openai/gpt-oss-20b',
+   usage=TokenUsage(prompt_tokens=78, completion_tokens=186, total_tokens=264))`.
+
+**Next task:** 3. Implement the Ollama/local model provider — Ollama running as a **Docker
+Compose service** (not on the host; smallest model, e.g. `tinyllama` / `qwen2.5:0.5b`). Ollama
+exposes an OpenAI-compatible API at `/v1`, so it may be able to reuse `OpenAICompatibleProvider`
+with a different base URL (and no real API key).
 
 **Security note (joblib):** `joblib.load`/pickle-based formats can execute arbitrary code if
 loading an untrusted file. Fine here since we only ever load artifacts this same project
